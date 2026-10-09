@@ -7,7 +7,7 @@ use std::{
 };
 
 use tokio::{
-    io::Interest,
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, Interest},
     net::{TcpListener, TcpStream},
 };
 
@@ -21,34 +21,6 @@ struct ServersideClient {
     name: String,
 }
 
-async fn read_exact(stream: &mut TcpStream, mut buf: &mut [u8]) -> io::Result<()> {
-    stream.ready(Interest::READABLE).await?;
-    while !buf.is_empty() {
-        match stream.try_read(buf) {
-            Ok(0) => break,
-            Ok(n) => {
-                buf = &mut buf[n..];
-            }
-            Err(e) => return Err(e),
-        }
-    }
-    Ok(())
-}
-
-async fn write_all(stream: &mut TcpStream, mut buf: &[u8]) -> io::Result<()> {
-    stream.ready(Interest::WRITABLE).await?;
-    while !buf.is_empty() {
-        match stream.try_write(buf) {
-            Ok(0) => {
-                return Err(io::Error::other(""));
-            }
-            Ok(n) => buf = &buf[n..],
-            Err(e) => return Err(e),
-        }
-    }
-    Ok(())
-}
-
 struct Server {
     addr: String,
     registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>,
@@ -60,19 +32,19 @@ impl Server {
         registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>,
     ) -> io::Result<()> {
         let mut message_buf = [0u8];
-        read_exact(&mut socket, &mut message_buf).await?;
+        socket.read_exact(&mut message_buf).await?;
 
         let message_type = parse_message_type(message_buf[0])?;
 
         // handle ping separately, as it doesn't need a client ID
         if let ClientMessageType::Ping = message_type {
-            write_all(&mut socket, &[ServerMessageType::Pong as u8]).await?;
+            socket.write_all(&[ServerMessageType::Pong as u8]).await?;
             println!("[{addr}]: {message_type:?} - pinged back!");
             return Ok(());
         }
 
         let mut id_buf = [0u8; 8];
-        read_exact(&mut socket, &mut id_buf).await?;
+        socket.read_exact(&mut id_buf).await?;
         let id = u64::from_le_bytes(id_buf);
         let message = format!("[{addr}] ({id:0>20}): {message_type:?} -");
 
@@ -81,13 +53,16 @@ impl Server {
                 // read name data
                 let mut name_buf = Vec::new();
 
-                read_exact(&mut socket, &mut name_buf).await?;
+                // use buf reader so we can use .read_until to find 0x00
+                // which marks end of name
+                let mut reader = BufReader::new(socket);
+                reader.read_until(0, &mut name_buf).await?;
                 let name_buf = String::from_utf8_lossy(&name_buf).to_string();
 
                 let result = {
                     let mut lock = registered_clients.lock().unwrap();
                     if let Entry::Vacant(e) = lock.entry(id) {
-                        println!("{message} registered user!");
+                        println!("{message} registered user '{name_buf}'!");
                         e.insert(ServersideClient { name: name_buf });
                         1
                     } else {
@@ -95,11 +70,9 @@ impl Server {
                         0
                     }
                 };
-                write_all(
-                    &mut socket,
-                    &[ServerMessageType::RegisterStatus as u8, result],
-                )
-                .await?;
+                reader
+                    .write_all(&[ServerMessageType::RegisterStatus as u8, result])
+                    .await?;
             }
             ClientMessageType::Transmit => {
                 let mut data = [0u8; 8192];
