@@ -1,7 +1,7 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, hash_map::Entry},
     fs,
-    io::{self, BufRead, BufReader, Bytes, Read, Write},
+    io::{self, Write},
     net::SocketAddr,
     sync::{Arc, Mutex},
 };
@@ -22,7 +22,7 @@ struct ServersideClient {
 }
 
 async fn read_exact(stream: &mut TcpStream, mut buf: &mut [u8]) -> io::Result<()> {
-    stream.ready(Interest::READABLE).await;
+    stream.ready(Interest::READABLE).await?;
     while !buf.is_empty() {
         match stream.try_read(buf) {
             Ok(0) => break,
@@ -36,7 +36,7 @@ async fn read_exact(stream: &mut TcpStream, mut buf: &mut [u8]) -> io::Result<()
 }
 
 async fn write_all(stream: &mut TcpStream, mut buf: &[u8]) -> io::Result<()> {
-    stream.ready(Interest::WRITABLE).await;
+    stream.ready(Interest::WRITABLE).await?;
     while !buf.is_empty() {
         match stream.try_write(buf) {
             Ok(0) => {
@@ -86,13 +86,13 @@ impl Server {
 
                 let result = {
                     let mut lock = registered_clients.lock().unwrap();
-                    if lock.contains_key(&id) {
+                    if let Entry::Vacant(e) = lock.entry(id) {
+                        println!("{message} registered user!");
+                        e.insert(ServersideClient { name: name_buf });
+                        1
+                    } else {
                         println!("{message} failed to register user, ID already used!");
                         0
-                    } else {
-                        println!("{message} registered user!");
-                        lock.insert(id, ServersideClient { name: name_buf });
-                        1
                     }
                 };
                 write_all(
@@ -119,7 +119,7 @@ impl Server {
             _ => {}
         }
 
-        return Ok(());
+        Ok(())
     }
     fn new(addr: String, registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>) -> Self {
         Self {

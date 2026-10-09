@@ -29,7 +29,7 @@ impl Client {
 
     fn ping_server(&self) -> io::Result<()> {
         let mut stream = TcpStream::connect(&self.addr)?;
-        stream.write(&[ClientMessageType::Ping as u8])?;
+        stream.write_all(&[ClientMessageType::Ping as u8])?;
         let mut resp_buf = [0u8];
         stream.read_exact(&mut resp_buf)?;
         let message_type: ServerMessageType = parse_message_type(resp_buf[0])?;
@@ -47,10 +47,10 @@ impl Client {
         let mut buf = [0u8; 8192];
         loop {
             let len = file.read(&mut buf)?;
-            stream.write(&buf[0..len])?;
             if len == 0 {
                 return Ok(());
             }
+            stream.write_all(&buf[0..len])?;
         }
     }
 
@@ -58,7 +58,6 @@ impl Client {
         let mut stream = TcpStream::connect(&self.addr)?;
         self.send_packet_header(&mut stream, ClientMessageType::Register)?;
         stream.write_all(name.as_bytes())?;
-        stream.write_all(&[0])?;
 
         let mut resp_buf = [0u8; 2];
         stream.read_exact(&mut resp_buf)?;

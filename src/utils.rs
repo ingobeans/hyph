@@ -29,5 +29,5 @@ pub fn parse_message_type<T: FromPrimitive>(value: u8) -> std::io::Result<T> {
             "Unknown message type: {value}"
         )));
     };
-    return Ok(message_type);
+    Ok(message_type)
 }
