@@ -1,13 +1,13 @@
 use std::{
     collections::{HashMap, hash_map::Entry},
-    fs,
     io::{self, Write},
     net::SocketAddr,
     sync::{Arc, Mutex},
 };
 
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, Interest},
+    fs,
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::{TcpListener, TcpStream},
 };
 
@@ -81,7 +81,7 @@ impl Server {
             }
             ClientMessageType::Transmit => {
                 let mut data = [0u8; 8192];
-                let mut file = fs::File::create(format!("received/{id}.bin"))?;
+                let mut file = fs::File::create(format!("received/{id}.bin")).await?;
                 let mut total = 0;
                 loop {
                     let len = socket.read(&mut data).await?;
@@ -90,7 +90,7 @@ impl Server {
                         break;
                     }
                     total += len;
-                    file.write_all(&data[..len])?;
+                    file.write_all(&data[..len]).await?;
                 }
             }
             _ => {}
