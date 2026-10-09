@@ -17,12 +17,12 @@ async fn handle_connection(mut socket: TcpStream, addr: SocketAddr) -> io::Resul
     print!("[{addr}]: {message_type:?} - ");
 
     match message_type {
-        MessageType::Ping => {
-            socket.write_all(&[MessageType::Ping as u8])?;
+        ClientMessageType::Ping => {
+            socket.write_all(&[ClientMessageType::Ping as u8])?;
             print!("pinged back!");
         }
-        MessageType::Register => {}
-        MessageType::Transmit => {
+        ClientMessageType::Register => {}
+        ClientMessageType::Transmit => {
             let mut data = [0u8; 8192];
             let mut file = fs::File::create("received.bin")?;
             let mut total = 0;

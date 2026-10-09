@@ -9,11 +9,11 @@ mod utils;
 
 fn ping_server(addr: &str) -> io::Result<()> {
     let mut stream = TcpStream::connect(addr)?;
-    stream.write(&[MessageType::Ping as u8])?;
+    stream.write(&[ClientMessageType::Ping as u8])?;
     let mut resp_buf = [0u8];
     stream.read_exact(&mut resp_buf)?;
-    let message_type = parse_message_type(resp_buf[0])?;
-    if message_type != MessageType::Ping {
+    let message_type: ServerMessageType = parse_message_type(resp_buf[0])?;
+    if message_type != ServerMessageType::Pong {
         return std::io::Result::Err(std::io::Error::other("Incorrect ping response"));
     }
     Ok(())
@@ -21,7 +21,7 @@ fn ping_server(addr: &str) -> io::Result<()> {
 
 fn send_file_to_server(filepath: &str, addr: &str) -> io::Result<()> {
     let mut stream = TcpStream::connect(addr)?;
-    stream.write(&[MessageType::Transmit as u8])?;
+    stream.write(&[ClientMessageType::Transmit as u8])?;
 
     let mut file = fs::File::open(filepath)?;
     let mut buf = [0u8; 8192];
