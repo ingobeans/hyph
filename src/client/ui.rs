@@ -14,7 +14,7 @@ slint::slint! {
     export component App inherits Window {
         background: rgb(13, 17, 23);
         no-frame: true;
-        title: "Hyperion";
+        title: "Hyph";
         width: 990px;
         height: 450px;
 
