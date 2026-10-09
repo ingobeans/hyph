@@ -10,6 +10,8 @@ use crate::utils::*;
 
 #[path = "../utils.rs"]
 mod utils;
+
+#[derive(Debug)]
 struct ServersideClient {
     name: String,
 }
@@ -53,14 +55,15 @@ impl Server {
                 let name_buf = String::from_utf8_lossy(&name_buf).to_string();
 
                 let mut lock = registered_clients.lock().unwrap();
-                if lock.contains_key(&id) {
-                    socket.write_all(&[ServerMessageType::RegisterStatus as u8, 0])?;
+                let result = if lock.contains_key(&id) {
                     println!("{message} failed to register user, ID already used!");
+                    0
                 } else {
-                    lock.insert(id, ServersideClient { name: name_buf });
-                    socket.write_all(&[ServerMessageType::RegisterStatus as u8, 1])?;
                     println!("{message} registered user!");
-                }
+                    lock.insert(id, ServersideClient { name: name_buf });
+                    1
+                };
+                socket.write_all(&[ServerMessageType::RegisterStatus as u8, result])?;
             }
             ClientMessageType::Transmit => {
                 let mut data = [0u8; 8192];
