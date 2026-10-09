@@ -51,7 +51,7 @@ impl Server {
         match message_type {
             ClientMessageType::Register => {
                 // read name data
-                let mut name_buf = [0u8; 32];
+                let mut name_buf = [0u8; MAX_NAME_LENGTH];
 
                 socket.read_exact(&mut name_buf).await?;
                 let len: usize = name_buf.iter().position(|f| *f == 0).unwrap_or(0);
