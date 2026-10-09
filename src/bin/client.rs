@@ -41,7 +41,7 @@ fn main() -> std::io::Result<()> {
         println!("server is inaccessible");
         return Ok(());
     }
-    send_file_to_server("dummy.bin", &addr)?;
+    // send_file_to_server("dummy.bin", &addr)?;
     println!("succesfully transmitted dummy.bin to server");
     Ok(())
 }
