@@ -20,14 +20,22 @@ async fn handle_connection(mut socket: TcpStream, addr: SocketAddr) -> io::Resul
 
     let mut guard = CONNECTION_COUNT.lock().unwrap();
     *guard += 1;
-    let message = format!("{guard} - [{addr}]: {message_type:?} -");
+    let count = *guard;
     drop(guard);
 
+    // handle ping separately, as it doesn't need a client ID
+    if let ClientMessageType::Ping = message_type {
+        socket.write_all(&[ClientMessageType::Ping as u8])?;
+        println!("{count}. [{addr}]: {message_type:?} - pinged back!");
+        return Ok(());
+    }
+
+    let mut id_buf = [0u8; 8];
+    socket.read_exact(&mut id_buf)?;
+    let id = u64::from_le_bytes(id_buf);
+    let message = format!("{count}. [{addr}] ({id}): {message_type:?} -");
+
     match message_type {
-        ClientMessageType::Ping => {
-            socket.write_all(&[ClientMessageType::Ping as u8])?;
-            println!("{message} pinged back!");
-        }
         ClientMessageType::Register => {}
         ClientMessageType::Transmit => {
             let mut data = [0u8; 8192];
@@ -43,6 +51,7 @@ async fn handle_connection(mut socket: TcpStream, addr: SocketAddr) -> io::Resul
                 file.write_all(&data[..len])?;
             }
         }
+        _ => {}
     }
     return Ok(());
 }
