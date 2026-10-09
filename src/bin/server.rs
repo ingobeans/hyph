@@ -114,7 +114,7 @@ impl Server {
                     let a = self.registered_clients.clone();
                     tokio::spawn(async move {
                         if let Err(e) = Self::handle_connection(socket, addr, a).await {
-                            eprintln!("{e}");
+                            eprintln!("[Connection Crashed] ({addr}): {e}");
                         }
                     });
                 }
