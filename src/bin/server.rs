@@ -57,6 +57,11 @@ impl Server {
                 // which marks end of name
                 let mut reader = BufReader::new(socket);
                 reader.read_until(0, &mut name_buf).await?;
+
+                if name_buf.last() == Some(&0) {
+                    name_buf.pop();
+                }
+
                 let name_buf = String::from_utf8_lossy(&name_buf).to_string();
 
                 let result = {
@@ -79,8 +84,7 @@ impl Server {
                 let mut file = fs::File::create(format!("received/{id}.bin"))?;
                 let mut total = 0;
                 loop {
-                    socket.ready(Interest::READABLE).await?;
-                    let len = socket.try_read(&mut data)?;
+                    let len = socket.read(&mut data).await?;
                     if len == 0 {
                         println!("{message} received {total} bytes");
                         break;
