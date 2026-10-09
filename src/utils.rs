@@ -2,6 +2,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
 pub const PORT: u16 = 56863;
+pub const MAX_NAME_LENGTH: usize = 32;
 
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
 pub enum ClientMessageType {

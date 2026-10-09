@@ -51,18 +51,19 @@ impl Server {
         match message_type {
             ClientMessageType::Register => {
                 // read name data
-                let mut name_buf = [0u8; 64];
+                let mut name_buf = [0u8; 32];
 
-                let len = socket.read(&mut name_buf).await?;
-                if name_buf[len - 1] != 0 {
-                    // not null terminated
+                socket.read_exact(&mut name_buf).await?;
+                let len: usize = name_buf.iter().position(|f| *f == 0).unwrap_or(0);
+
+                if len == 0 {
                     println!("{message} failed to register user, bad name!");
                     socket
                         .write_all(&[ServerMessageType::RegisterStatus as u8, 0])
                         .await?;
                     return Ok(());
                 }
-                let name_buf = String::from_utf8_lossy(&name_buf[..len - 1]).to_string();
+                let name_buf = String::from_utf8_lossy(&name_buf[..len]).to_string();
 
                 let result = {
                     let mut lock = registered_clients.lock().unwrap();
