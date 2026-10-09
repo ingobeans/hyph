@@ -55,13 +55,14 @@ impl Client {
     }
 
     fn register(&self, name: &str) -> io::Result<bool> {
+        let bytes = name.as_bytes();
+        if bytes.len() >= MAX_NAME_LENGTH {
+            return Ok(false);
+        }
+
         let mut stream = TcpStream::connect(&self.addr)?;
         self.send_packet_header(&mut stream, ClientMessageType::Register)?;
 
-        let bytes = name.as_bytes();
-        if bytes.len() > MAX_NAME_LENGTH {
-            return Ok(false);
-        }
         let mut bytes = bytes.to_vec();
         bytes.resize(MAX_NAME_LENGTH, 0);
         stream.write_all(&bytes)?;
@@ -87,7 +88,7 @@ fn main() -> std::io::Result<()> {
     }
     // client.send_file_to_server("dummy.bin")?;
     // println!("succesfully transmitted dummy.bin to server");
-    let success = client.register("name person")?;
+    let success = client.register(&"a".repeat(MAX_NAME_LENGTH))?;
     println!("{success}");
     Ok(())
 }
