@@ -3,7 +3,7 @@ use num_traits::FromPrimitive;
 
 pub const PORT: u16 = 56863;
 
-#[derive(FromPrimitive, ToPrimitive, Debug)]
+#[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
 pub enum MessageType {
     /// Simple ping to verify that server exists and is accessible
     Ping,
