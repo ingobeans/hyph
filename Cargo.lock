@@ -48,7 +48,7 @@ dependencies = [
 
 [[package]]
 name = "hyperion"
-version = "0.1.0"
+version = "0.1.14"
 dependencies = [
  "num-derive",
  "num-traits",

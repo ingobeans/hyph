@@ -53,6 +53,22 @@ impl Client {
             }
         }
     }
+
+    fn register(&self, name: &str) -> io::Result<bool> {
+        let mut stream = TcpStream::connect(&self.addr)?;
+        self.send_packet_header(&mut stream, ClientMessageType::Register)?;
+        stream.write_all(name.as_bytes())?;
+        stream.write_all(&[0])?;
+
+        let mut resp_buf = [0u8; 2];
+        stream.read_exact(&mut resp_buf)?;
+        let message_type: ServerMessageType = parse_message_type(resp_buf[0])?;
+        if message_type != ServerMessageType::RegisterStatus {
+            return std::io::Result::Err(std::io::Error::other("Incorrect register status"));
+        }
+
+        Ok(resp_buf[1] == 1)
+    }
 }
 
 fn main() -> std::io::Result<()> {
@@ -63,7 +79,9 @@ fn main() -> std::io::Result<()> {
         println!("server is inaccessible");
         return Ok(());
     }
-    client.send_file_to_server("dummy.bin")?;
-    println!("succesfully transmitted dummy.bin to server");
+    // client.send_file_to_server("dummy.bin")?;
+    // println!("succesfully transmitted dummy.bin to server");
+    let success = client.register("name person")?;
+    println!("{success}");
     Ok(())
 }
