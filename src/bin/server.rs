@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{self, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
 };
@@ -13,15 +14,30 @@ async fn handle_connection(mut socket: TcpStream, addr: SocketAddr) -> io::Resul
     socket.read_exact(&mut message_buf)?;
 
     let message_type = parse_message_type(message_buf[0])?;
-    println!("[{addr}]: connected with message type: {message_type:?}");
+    print!("[{addr}]: {message_type:?} - ");
 
     match message_type {
         MessageType::Ping => {
             socket.write_all(&[MessageType::Ping as u8])?;
+            print!("pinged back!");
         }
         MessageType::Register => {}
-        MessageType::Transmit => {}
+        MessageType::Transmit => {
+            let mut data = [0u8; 8192];
+            let mut file = fs::File::create("received.bin")?;
+            let mut total = 0;
+            loop {
+                let len = socket.read(&mut data)?;
+                if len == 0 {
+                    println!("received {total} bytes");
+                    return Ok(());
+                }
+                total += len;
+                file.write_all(&data[..len])?;
+            }
+        }
     }
+    println!();
     return Ok(());
 }
 
