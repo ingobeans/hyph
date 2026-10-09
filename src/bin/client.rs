@@ -1,5 +1,7 @@
 use std::io::prelude::*;
 use std::net::TcpStream;
+// use std::thread::sleep;
+// use std::time::Duration;
 
 use crate::utils::*;
 
@@ -13,5 +15,6 @@ fn main() -> std::io::Result<()> {
     stream.write(&[1])?;
     println!("sent to socket");
     // stream.read(&mut [0; 128])?;
+    // sleep(Duration::from_secs(4));
     Ok(())
 }
