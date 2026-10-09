@@ -5,7 +5,12 @@ edition = "2024"
 
 
 [dependencies]
-tokio = { version = "1.53.2", features = ["rt", "macros", "rt-multi-thread"] }
+tokio = { version = "1.53.2", features = [
+    "rt",
+    "macros",
+    "rt-multi-thread",
+    "net",
+] }
 num-derive = "0.5"
 num-traits = "0.2"
 rand = "0.10.3"
