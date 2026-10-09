@@ -13,8 +13,10 @@ struct Client {
 }
 impl Client {
     fn new(addr: String) -> Self {
-        let id = 0;
-        Self { addr, id }
+        Self {
+            addr,
+            id: rand::random(),
+        }
     }
     fn send_packet_header(
         &self,

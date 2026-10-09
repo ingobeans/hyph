@@ -33,7 +33,7 @@ async fn handle_connection(mut socket: TcpStream, addr: SocketAddr) -> io::Resul
     let mut id_buf = [0u8; 8];
     socket.read_exact(&mut id_buf)?;
     let id = u64::from_le_bytes(id_buf);
-    let message = format!("{count}. [{addr}] ({id}): {message_type:?} -");
+    let message = format!("{count}. [{addr}] ({id:0>20}): {message_type:?} -");
 
     match message_type {
         ClientMessageType::Register => {}
