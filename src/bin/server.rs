@@ -26,14 +26,14 @@ async fn handle_connection(mut socket: TcpStream, addr: SocketAddr) -> io::Resul
     // handle ping separately, as it doesn't need a client ID
     if let ClientMessageType::Ping = message_type {
         socket.write_all(&[ClientMessageType::Ping as u8])?;
-        println!("{count}. [{addr}]: {message_type:?} - pinged back!");
+        println!("{count:0>3}. [{addr}]: {message_type:?} - pinged back!");
         return Ok(());
     }
 
     let mut id_buf = [0u8; 8];
     socket.read_exact(&mut id_buf)?;
     let id = u64::from_le_bytes(id_buf);
-    let message = format!("{count}. [{addr}] ({id:0>20}): {message_type:?} -");
+    let message = format!("{count:0>3}. [{addr}] ({id:0>20}): {message_type:?} -");
 
     match message_type {
         ClientMessageType::Register => {}
