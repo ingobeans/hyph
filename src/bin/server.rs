@@ -51,18 +51,18 @@ impl Server {
         match message_type {
             ClientMessageType::Register => {
                 // read name data
-                let mut name_buf = Vec::new();
+                let mut name_buf = [0u8; 64];
 
-                // use buf reader so we can use .read_until to find 0x00
-                // which marks end of name
-                let mut reader = BufReader::new(socket);
-                reader.read_until(0, &mut name_buf).await?;
-
-                if name_buf.last() == Some(&0) {
-                    name_buf.pop();
+                let len = socket.read(&mut name_buf).await?;
+                if name_buf[len - 1] != 0 {
+                    // not null terminated
+                    println!("{message} failed to register user, bad name!");
+                    socket
+                        .write_all(&[ServerMessageType::RegisterStatus as u8, 0])
+                        .await?;
+                    return Ok(());
                 }
-
-                let name_buf = String::from_utf8_lossy(&name_buf).to_string();
+                let name_buf = String::from_utf8_lossy(&name_buf[..len - 1]).to_string();
 
                 let result = {
                     let mut lock = registered_clients.lock().unwrap();
@@ -75,7 +75,7 @@ impl Server {
                         0
                     }
                 };
-                reader
+                socket
                     .write_all(&[ServerMessageType::RegisterStatus as u8, result])
                     .await?;
             }
