@@ -39,7 +39,7 @@ async fn handle_connection(mut socket: TcpStream, addr: SocketAddr) -> io::Resul
         ClientMessageType::Register => {}
         ClientMessageType::Transmit => {
             let mut data = [0u8; 8192];
-            let mut file = fs::File::create("received.bin")?;
+            let mut file = fs::File::create(format!("received/{id}.bin"))?;
             let mut total = 0;
             loop {
                 let len = socket.read(&mut data)?;
