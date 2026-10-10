@@ -1,5 +1,6 @@
 use std::fs;
 use std::io::{self, prelude::*};
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 
@@ -15,7 +16,7 @@ pub struct Client {
     pub temp_dir_name: String,
     pub screen_capture_thread: Option<(
         JoinHandle<()>,
-        Sender<()>,
+        Sender<PathBuf>,
         Receiver<ScreenCaptureStateMessage>,
     )>,
 }

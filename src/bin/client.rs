@@ -1,5 +1,6 @@
 use std::{rc::Rc, sync::Mutex, time::Duration};
 
+use rfd::FileDialog;
 use slint::ToSharedString;
 use tokio::time::sleep;
 
@@ -118,7 +119,8 @@ fn main() -> std::io::Result<()> {
                 let mut c = c.lock().unwrap();
                 let state = c.register(&name).await.is_ok_and(|f| f);
                 if state {
-                    let thread = start_screencapture_thread("capture/".into(), "output.bin".into());
+                    let thread =
+                        start_screencapture_thread("exam_data/".into(), "output.bin".into());
                     c.screen_capture_thread = Some(thread);
                 }
                 state
@@ -142,6 +144,10 @@ fn main() -> std::io::Result<()> {
     let c = client_rc.clone();
     let handle = app_handle.clone();
     app.on_submit_exam_click(move || {
+        let Some(folder) = FileDialog::new().pick_folder() else {
+            return;
+        };
+
         let c = c.clone();
         let handle = handle.clone();
         if let Some(handle) = handle.upgrade() {
@@ -157,7 +163,7 @@ fn main() -> std::io::Result<()> {
                 let c = c.lock().unwrap();
                 if let Some((join_handle, tx, rx)) = &c.screen_capture_thread {
                     // send over tx to tell thread to terminate
-                    let _ = tx.send(());
+                    let _ = tx.send(folder.clone());
 
                     // wait for thread to completely finish
                     loop {
@@ -165,11 +171,19 @@ fn main() -> std::io::Result<()> {
                         sleep(Duration::from_millis(500)).await;
 
                         // meanwhile, also check for status update messages
-                        if let Ok(ScreenCaptureStateMessage::Stopped) = rx.try_recv() {
-                            if let Some(handle) = handle.upgrade() {
-                                handle.set_submit_exam_status(
-                                    "Saving screen capture data...".to_shared_string(),
-                                )
+                        if let Ok(message) = rx.try_recv() {
+                            let message = match message {
+                                ScreenCaptureStateMessage::Stopped => Some("Saving submission..."),
+                                ScreenCaptureStateMessage::FinishedSavingSubmission => {
+                                    Some("Compressing exam data...")
+                                }
+                                _ => None,
+                            };
+                            if let Some(message) = message
+                                && let Some(handle) = handle.upgrade()
+                            {
+                                println!("{message}");
+                                handle.set_submit_exam_status(message.to_shared_string())
                             }
                         }
 
