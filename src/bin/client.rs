@@ -30,6 +30,11 @@ fn main() -> std::io::Result<()> {
         let handle = handle.clone();
         if let Some(handle) = handle.upgrade() {
             handle.set_ping_enabled(false);
+            handle.set_ping_success(false);
+            handle.set_ping_fail(false);
+            handle.set_start_exam_success(false);
+            handle.set_start_exam_fail(false);
+
             let mut c = c.lock().unwrap();
             c.addr = format!("{}:{}",handle.get_ip_address(),PORT);
             println!("{}",c.addr);
@@ -59,6 +64,8 @@ fn main() -> std::io::Result<()> {
         if let Some(handle) = handle.upgrade() {
             handle.set_ping_enabled(false);
             handle.set_start_exam_enabled(false);
+            handle.set_start_exam_success(false);
+            handle.set_start_exam_fail(false);
         }
         
         let future = async move {
@@ -68,9 +75,12 @@ fn main() -> std::io::Result<()> {
             };
             println!("{state}");
             if let Some(handle) = handle.upgrade() {
-                handle.set_ping_enabled(true);
                 handle.set_start_exam_success(state);
                 handle.set_start_exam_fail(!state);
+                if !state {
+                    handle.set_ping_enabled(true);
+                    handle.set_start_exam_enabled(true);
+                }
             }
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
