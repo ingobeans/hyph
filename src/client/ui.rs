@@ -72,6 +72,61 @@ slint::slint! {
             }
         }
     }
+    component ImageButton inherits TouchArea {
+        in property <image> image: @image-url("assets/close.png");
+        in property <brush> normal-color: white;
+        in property <brush> hover-color: #b4b4b4;
+        in property <brush> clicked-color: #a0a0a0;
+
+        img:=Image {
+            width: parent.width;
+            height: parent.height;
+            source: root.image;
+            colorize: white;
+        }
+
+        changed enabled => {
+            if (self.enabled) {
+                if (self.pressed) {
+                    img.colorize = root.clicked-color;
+                } else if (self.has-hover) {
+                    img.colorize = root.hover-color;
+                } else {
+                    img.colorize = root.normal-color;
+                }
+            } else {
+                img.colorize = root.clicked-color;
+            }
+        }
+
+        changed has-hover => {
+            if (self.enabled) {
+                if (self.pressed) {
+                    img.colorize = root.clicked-color;
+                } else if (self.has-hover) {
+                    img.colorize = root.hover-color;
+                } else {
+                    img.colorize = root.normal-color;
+                }
+            } else {
+                img.colorize = root.clicked-color;
+            }
+        }
+
+        pointer-event() => {
+            if (self.enabled) {
+                if (self.pressed) {
+                    img.colorize = root.clicked-color;
+                } else if (self.has-hover) {
+                    img.colorize = root.hover-color;
+                } else {
+                    img.colorize = root.normal-color;
+                }
+            } else {
+                img.colorize = root.clicked-color;
+            }
+        }
+    }
     export component App inherits Window {
         background: rgb(13, 17, 23);
         no-frame: true;
@@ -107,62 +162,13 @@ slint::slint! {
             y: 10px;
         }
 
-        TouchArea {
+        ImageButton {
             enabled: start-exam-enabled;
             width: 30px;
             height: 30px;
             x: (parent.width) - (self.width) - 5px;
             y:5px;
             
-            img:=Image {
-                width: parent.width;
-                height: parent.height;
-                source: @image-url("assets/close.png");
-                colorize: white;
-            }
-
-            changed enabled => {
-                if (self.enabled) {
-                    if (self.pressed) {
-                        img.colorize = #a0a0a0;
-                    } else if (self.has-hover) {
-                        img.colorize = #b4b4b4;
-                    } else {
-                        img.colorize = white;
-                    }
-                } else {
-                    img.colorize = #a0a0a0;
-                }
-            }
-
-            changed has-hover => {
-                if (self.enabled) {
-                    if (self.pressed) {
-                        img.colorize = #a0a0a0;
-                    } else if (self.has-hover) {
-                        img.colorize = #b4b4b4;
-                    } else {
-                        img.colorize = white;
-                    }
-                } else {
-                    img.colorize = #a0a0a0;
-                }
-            }
-
-            pointer-event() => {
-                if (self.enabled) {
-                    if (self.pressed) {
-                        img.colorize = #a0a0a0;
-                    } else if (self.has-hover) {
-                        img.colorize = #b4b4b4;
-                    } else {
-                        img.colorize = white;
-                    }
-                } else {
-                    img.colorize = #a0a0a0;
-                }
-            }
-
             clicked => closeProgram();
         }
         
