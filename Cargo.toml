@@ -1,6 +1,6 @@
 [package]
 name = "hyph"
-version = "0.2.5"
+version = "0.3.4"
 edition = "2024"
 
 
