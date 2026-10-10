@@ -146,11 +146,11 @@ export component App inherits Window {
     in property <string> submit-exam-status: "";
 
     out property <string> ip_address;
-    callback pingClick();
-    callback startExamClick();
-    callback submitExamClick();
-    callback closeProgram();
-    callback mouseMove(length, length);
+    callback ping_click();
+    callback start_exam_click();
+    callback submit_exam_click();
+    callback close_program();
+    callback mouse_move(length, length);
 
     TouchArea {
         y: 0;
@@ -167,7 +167,7 @@ export component App inherits Window {
 
         moved => {
             if (self.pressed) {
-                root.mouseMove((self.mouse_x) - self.pressed_x, (self.mouse_y) - self.pressed_y);
+                root.mouse_move((self.mouse_x) - self.pressed_x, (self.mouse_y) - self.pressed_y);
             }
         }
     }
@@ -192,7 +192,7 @@ export component App inherits Window {
         x: (parent.width) - (self.width) - 5px;
         y: 5px;
 
-        clicked => closeProgram();
+        clicked => close_program();
     }
 
     HorizontalLayout {
@@ -220,7 +220,7 @@ export component App inherits Window {
             height: 40px;
             y: -8px;
             text: "Ping server";
-            clicked => pingClick();
+            clicked => ping_click();
         }
 
         Container {
@@ -260,7 +260,7 @@ export component App inherits Window {
             y: -8px;
             text: "Start Exam";
             primary: true;
-            clicked => startExamClick();
+            clicked => start_exam_click();
         }
 
         Container {
@@ -301,7 +301,7 @@ export component App inherits Window {
             y: -8px;
             text: "Submit Exam";
             primary: true;
-            clicked => submitExamClick();
+            clicked => submit_exam_click();
         }
 
         Container {

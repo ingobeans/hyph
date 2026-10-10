@@ -26,7 +26,7 @@ fn main() -> std::io::Result<()> {
     let app_handle = Rc::new(app.as_weak());
 
     let handle = app_handle.clone();
-    app.on_closeProgram(move || {
+    app.on_close_program(move || {
         if let Some(handle) = handle.upgrade() {
             handle.window().hide().unwrap();
         }
@@ -47,7 +47,7 @@ fn main() -> std::io::Result<()> {
     });
 
     let handle = app_handle.clone();
-    app.on_mouseMove(move |delta_x, delta_y| {
+    app.on_mouse_move(move |delta_x, delta_y| {
         let Some(pin_win_clone) = handle.upgrade() else {
             return;
         };
@@ -65,7 +65,7 @@ fn main() -> std::io::Result<()> {
 
     let c = client_rc.clone();
     let handle = app_handle.clone();
-    app.on_pingClick(move || {
+    app.on_ping_click(move || {
         let c = c.clone();
         let handle = handle.clone();
         if let Some(handle) = handle.upgrade() {
@@ -97,7 +97,7 @@ fn main() -> std::io::Result<()> {
 
     let c = client_rc.clone();
     let handle = app_handle.clone();
-    app.on_startExamClick(move || {
+    app.on_start_exam_click(move || {
         let c = c.clone();
         let handle = handle.clone();
         let name = name.clone();
@@ -135,7 +135,7 @@ fn main() -> std::io::Result<()> {
 
     let c = client_rc.clone();
     let handle = app_handle.clone();
-    app.on_submitExamClick(move || {
+    app.on_submit_exam_click(move || {
         let c = c.clone();
         let handle = handle.clone();
         if let Some(handle) = handle.upgrade() {
