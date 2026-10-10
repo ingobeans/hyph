@@ -1,6 +1,7 @@
-use std::{rc::Rc, sync::Mutex};
+use std::{rc::Rc, sync::Mutex, time::Duration};
 
 use slint::ToSharedString;
+use tokio::time::sleep;
 
 use crate::{backend::*, screencapture::*, utils::*};
 
@@ -95,8 +96,8 @@ fn main() -> std::io::Result<()> {
                 let mut c = c.lock().unwrap();
                 let state = c.register(&name).await.is_ok_and(|f| f);
                 if state {
-                    let (_handle, tx) = start_screencapture_thread("capture/".into());
-                    c.screen_capture_tx = Some(tx);
+                    let thread = start_screencapture_thread("capture/".into());
+                    c.screen_capture_thread = Some(thread);
                 }
                 state
             };
@@ -109,6 +110,52 @@ fn main() -> std::io::Result<()> {
                 } else {
                     handle.set_ping_enabled(true);
                     handle.set_start_exam_enabled(true);
+                }
+            }
+        };
+        slint::spawn_local(async_compat::Compat::new(future)).unwrap();
+    });
+
+    let c = client_rc.clone();
+    let handle = app_handle.clone();
+    app.on_submitExamClick(move || {
+        let c = c.clone();
+        let handle = handle.clone();
+        if let Some(handle) = handle.upgrade() {
+            handle.set_ping_enabled(false);
+            handle.set_exam_stopped(true);
+            handle.set_submit_exam_success(false);
+            handle.set_submit_exam_fail(false);
+        }
+
+        let future = async move {
+            let state = {
+                let c = c.lock().unwrap();
+                if let Some((handle, tx)) = &c.screen_capture_thread {
+                    // send over tx to tell thread to terminate
+                    let _ = tx.send(());
+
+                    // wait for thread to completely finish
+                    loop {
+                        print!(".");
+                        sleep(Duration::from_millis(500)).await;
+                        if handle.is_finished() {
+                            break;
+                        }
+                    }
+                    c.send_file_to_server("dummy.bin").await.is_ok()
+                } else {
+                    false
+                }
+            };
+            println!("{state}");
+            if let Some(handle) = handle.upgrade() {
+                handle.set_submit_exam_success(state);
+                handle.set_submit_exam_fail(!state);
+                if state {
+                    handle.set_exam_active(false);
+                } else {
+                    handle.set_exam_stopped(false);
                 }
             }
         };

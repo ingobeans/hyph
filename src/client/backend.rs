@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::{self, prelude::*};
 use std::sync::mpsc::Sender;
+use std::thread::JoinHandle;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -11,7 +12,7 @@ pub struct Client {
     pub addr: String,
     pub id: u64,
     pub temp_dir_name: String,
-    pub screen_capture_tx: Option<Sender<()>>,
+    pub screen_capture_thread: Option<(JoinHandle<()>, Sender<()>)>,
 }
 impl Client {
     pub fn new(addr: String) -> Self {
@@ -20,7 +21,7 @@ impl Client {
             addr,
             id,
             temp_dir_name: Self::get_temp_dir_name_from_client_id(id),
-            screen_capture_tx: None,
+            screen_capture_thread: None,
         }
     }
 

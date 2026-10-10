@@ -152,11 +152,16 @@ export component App inherits Window {
     in property <bool> start-exam-success: false;
     in property <bool> start-exam-fail: false;
 
+    in property <bool> submit-exam-success: false;
+    in property <bool> submit-exam-fail: false;
+
     in property <bool> exam-active: false;
+    in property <bool> exam-stopped: false;
 
     out property <string> ip_address;
     callback pingClick();
     callback startExamClick();
+    callback submitExamClick();
     callback closeProgram();
 
     InnerBorder {
@@ -276,13 +281,14 @@ export component App inherits Window {
         alignment: start;
         spacing: 10px;
         Button {
-            visible: root.exam-active;
+            visible: root.exam-active || root.exam-stopped;
+            enabled: !root.exam-stopped;
             width: 240px;
             height: 40px;
             y: -8px;
             text: "Submit Exam";
             primary: true;
-            clicked => closeProgram();
+            clicked => submitExamClick();
         }
 
         Container {
@@ -291,7 +297,7 @@ export component App inherits Window {
                 height: 30px;
                 width: 30px;
                 y: -5px;
-                visible: false; //root.start-exam-success;
+                visible: root.submit-exam-success;
                 source: @image-url("assets/check.png");
             }
 
@@ -299,7 +305,7 @@ export component App inherits Window {
                 height: 30px;
                 width: 30px;
                 y: -5px;
-                visible: false; //root.start-exam-fail;
+                visible: root.submit-exam-fail;
                 source: @image-url("assets/fail.png");
             }
         }
