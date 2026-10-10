@@ -168,10 +168,10 @@ slint::slint! {
             height: 30px;
             x: (parent.width) - (self.width) - 5px;
             y:5px;
-            
+
             clicked => closeProgram();
         }
-        
+
 
         HorizontalLayout {
             y: 80px;

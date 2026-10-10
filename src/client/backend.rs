@@ -24,7 +24,7 @@ impl Client {
         }
     }
 
-    fn get_temp_dir_name_from_client_id(id:u64)->String {
+    fn get_temp_dir_name_from_client_id(id: u64) -> String {
         // this has both the function of:
         //  - shortening the id so the dir name isnt super long
         //  - making sure the client id can't be found from the dir name (not neccesarily needed, but why not)
@@ -57,7 +57,8 @@ impl Client {
 
     pub async fn send_file_to_server(&self, filepath: &str) -> io::Result<()> {
         let mut stream = TcpStream::connect(&self.addr).await?;
-        self.send_packet_header(&mut stream, ClientMessageType::Transmit).await?;
+        self.send_packet_header(&mut stream, ClientMessageType::Transmit)
+            .await?;
 
         let mut file = fs::File::open(filepath)?;
         let mut buf = [0u8; 8192];
@@ -77,7 +78,8 @@ impl Client {
         }
 
         let mut stream = TcpStream::connect(&self.addr).await?;
-        self.send_packet_header(&mut stream, ClientMessageType::Register).await?;
+        self.send_packet_header(&mut stream, ClientMessageType::Register)
+            .await?;
 
         let mut bytes = bytes.to_vec();
         bytes.resize(MAX_NAME_LENGTH, 0);
