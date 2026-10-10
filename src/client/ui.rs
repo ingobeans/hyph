@@ -75,6 +75,7 @@ slint::slint! {
         height: 450px;
 
         in property <string> ping-state: "";
+        in property <bool> ping-enabled: true;
         out property <string> ip_address;
         callback pingClick();
 
@@ -109,6 +110,7 @@ slint::slint! {
                 }
             }
             Button {
+                enabled: ping-enabled;
                 height: 40px;
                 y:-8px;
                 text: "Ping server";

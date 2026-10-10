@@ -24,16 +24,20 @@ fn main() -> std::io::Result<()> {
         let c = c.clone();
         let handle = app_handle.clone();
         if let Some(handle) = handle.upgrade() {
+            handle.set_ping_enabled(false);
             let mut c = c.lock().unwrap();
             c.addr = format!("{}:{}",handle.get_ip_address(),PORT);
             println!("{}",c.addr);
         }
         
         let future = async move {
-            let c = c.lock().unwrap();
-            let state = c.ping_server().await.is_ok();
+            let state =  {
+                let c = c.lock().unwrap();
+                c.ping_server().await.is_ok()
+            };
             println!("{state}");
             if let Some(handle) = handle.upgrade() {
+                handle.set_ping_enabled(true);
                 handle.set_ping_state(state.to_shared_string());
             }
         };
