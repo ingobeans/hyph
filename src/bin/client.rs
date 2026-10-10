@@ -30,6 +30,20 @@ fn main() -> std::io::Result<()> {
         }
     });
 
+    let handle = app_handle.clone();
+    app.window().on_close_requested(move || {
+        let exam_active = if let Some(handle) = handle.upgrade() {
+            !handle.get_start_exam_enabled()
+        } else {
+            false
+        };
+        if exam_active {
+            slint::CloseRequestResponse::KeepWindowShown
+        } else {
+            slint::CloseRequestResponse::HideWindow
+        }
+    });
+
     let c = client_rc.clone();
     let handle = app_handle.clone();
     app.on_pingClick(move || {
