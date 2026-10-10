@@ -149,7 +149,7 @@ slint::slint! {
             alignment:start;
             spacing: 10px;
             Button {
-                enabled: false;
+                enabled: root.ping-success && root.ping-enabled;
                 width: 240px;
                 height: 40px;
                 y:-8px;
