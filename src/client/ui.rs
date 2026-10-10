@@ -121,23 +121,45 @@ slint::slint! {
                 colorize: white;
             }
 
-            changed has-hover => {
-                if (self.pressed) {
-                    img.colorize = #a0a0a0;
-                } else if (self.has-hover) {
-                    img.colorize = #b4b4b4;
+            changed enabled => {
+                if (self.enabled) {
+                    if (self.pressed) {
+                        img.colorize = #a0a0a0;
+                    } else if (self.has-hover) {
+                        img.colorize = #b4b4b4;
+                    } else {
+                        img.colorize = white;
+                    }
                 } else {
-                    img.colorize = white;
+                    img.colorize = #a0a0a0;
+                }
+            }
+
+            changed has-hover => {
+                if (self.enabled) {
+                    if (self.pressed) {
+                        img.colorize = #a0a0a0;
+                    } else if (self.has-hover) {
+                        img.colorize = #b4b4b4;
+                    } else {
+                        img.colorize = white;
+                    }
+                } else {
+                    img.colorize = #a0a0a0;
                 }
             }
 
             pointer-event() => {
-                if (self.pressed) {
-                    img.colorize = #a0a0a0;
-                } else if (self.has-hover) {
-                    img.colorize = #b4b4b4;
+                if (self.enabled) {
+                    if (self.pressed) {
+                        img.colorize = #a0a0a0;
+                    } else if (self.has-hover) {
+                        img.colorize = #b4b4b4;
+                    } else {
+                        img.colorize = white;
+                    }
                 } else {
-                    img.colorize = white;
+                    img.colorize = #a0a0a0;
                 }
             }
 
