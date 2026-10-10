@@ -74,6 +74,7 @@ slint::slint! {
         width: 990px;
         height: 450px;
 
+        in property <string> username: "Logged in as: USER";
         in property <string> ping-state: "";
         in property <bool> ping-enabled: true;
         out property <string> ip_address;
@@ -99,10 +100,10 @@ slint::slint! {
             spacing: 10px;
             Text {
                 font-size: 20px;
-                text:"Enter server IP:";
+                text:"Server IP:";
             }
             LineInput {
-                width: 350px;
+                width: 420px;
                 padding-width: 8px;
                 y: -4px;
                 changed out-text => {
@@ -115,6 +116,24 @@ slint::slint! {
                 y:-8px;
                 text: "Ping server";
                 clicked => pingClick();
+            }
+        }
+        Text {
+            text: username;
+            y: 125px;
+        }
+        HorizontalLayout {
+            y: 160px;
+            width: 240px;
+            alignment:start;
+            spacing: 10px;
+            Button {
+                enabled: false;
+                width: 240px;
+                height: 40px;
+                y:-8px;
+                text: "Start Exam";
+                primary: true;
             }
         }
 

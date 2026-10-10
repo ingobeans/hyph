@@ -44,6 +44,9 @@ fn main() -> std::io::Result<()> {
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
     });
 
+    let name = whoami::realname()?;
+    app.set_username(format!("Logged in as: {name}").to_shared_string());
+
     app.run().unwrap();
 
     // let server_accessible = client.ping_server().is_ok();
