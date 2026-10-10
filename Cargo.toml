@@ -1,6 +1,6 @@
 [package]
 name = "hyph"
-version = "0.3.8"
+version = "0.3.9"
 edition = "2024"
 
 
@@ -23,3 +23,4 @@ win-screenshot = "4.0.14"
 image = "0.25.10"
 imageproc = "0.27.0"
 ab_glyph = "0.2.32"
+chrono = "0.4.45"

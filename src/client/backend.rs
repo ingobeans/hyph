@@ -9,13 +9,26 @@ use crate::utils::*;
 pub struct Client {
     pub addr: String,
     pub id: u64,
+    pub temp_dir_name: String,
 }
 impl Client {
     pub fn new(addr: String) -> Self {
+        let id = rand::random();
         Self {
             addr,
-            id: rand::random(),
+            id,
+            temp_dir_name: Self::get_temp_dir_name_from_client_id(id),
         }
+    }
+
+    fn get_temp_dir_name_from_client_id(id:u64)->String {
+        // this has both the function of:
+        //  - shortening the id so the dir name isnt super long
+        //  - making sure the client id can't be found from the dir name (not neccesarily needed, but why not)
+        let hashed = (id % (u32::MAX as u64)) as u32;
+
+        // build a string from the hashed id
+        format!("{hashed:0>8x}")
     }
 
     async fn send_packet_header(
