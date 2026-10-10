@@ -46,6 +46,23 @@ fn main() -> std::io::Result<()> {
         }
     });
 
+    let handle = app_handle.clone();
+    app.on_mouseMove(move |delta_x, delta_y| {
+        let Some(pin_win_clone) = handle.upgrade() else {
+            return;
+        };
+        let logical_pos = pin_win_clone
+            .window()
+            .position()
+            .to_logical(pin_win_clone.window().scale_factor());
+        pin_win_clone
+            .window()
+            .set_position(slint::LogicalPosition::new(
+                logical_pos.x + delta_x,
+                logical_pos.y + delta_y,
+            ));
+    });
+
     let c = client_rc.clone();
     let handle = app_handle.clone();
     app.on_pingClick(move || {

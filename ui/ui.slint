@@ -1,51 +1,37 @@
-    import { Button } from "std-widgets.slint";
-component InnerBorder {
-    in property <brush> background-color;
-    in property <brush> border-color;
-    Rectangle {
-        background: parent.border-color;
-    }
-
-    Rectangle {
-        width: (parent.width) - 2px;
-        height: (parent.height) - 2px;
-        background: parent.background-color;
-    }
-}
+import { Button } from "std-widgets.slint";
 
 component OuterBorder {
-    in property <brush> background-color;
     in property <brush> border-color;
     in property <length> padding-width;
     Rectangle {
         x: -parent.padding-width;
-        y: -parent.padding-width;
-        width: (parent.width) + 2px + parent.padding-width * 2;
-        height: 2px;
+        y: -parent.padding-width - 1px;
+        width: (parent.width) + 1px + parent.padding-width * 2;
+        height: 1px;
         background: parent.border-color;
     }
 
     Rectangle {
-        x: -parent.padding-width;
-        y: -parent.padding-width;
-        width: 2px;
-        height: (parent.height) + 2px + parent.padding-width * 2;
+        x: -parent.padding-width - 1px;
+        y: -parent.padding-width - 1px;
+        width: 1px;
+        height: (parent.height) + 1px * 2 + parent.padding-width * 2;
         background: parent.border-color;
     }
 
     Rectangle {
         x: -parent.padding-width;
         y: (parent.height) + parent.padding-width;
-        width: (parent.width) + 2px + parent.padding-width * 2;
-        height: 2px;
+        width: (parent.width) + 1px + parent.padding-width * 2;
+        height: 1px;
         background: parent.border-color;
     }
 
     Rectangle {
         x: parent.width + parent.padding-width;
         y: -parent.padding-width;
-        width: 2px;
-        height: (parent.height) + 2px + parent.padding-width * 2;
+        width: 1px;
+        height: (parent.height) + 1px + parent.padding-width * 2;
         background: parent.border-color;
     }
 }
@@ -73,7 +59,6 @@ component LineInput {
             padding-width: root.padding-width;
             width: parent.width;
             height: parent.height;
-            background-color: rgb(13, 17, 23);
             border-color: rgb(61, 68, 77);
         }
     }
@@ -165,18 +150,39 @@ export component App inherits Window {
     callback startExamClick();
     callback submitExamClick();
     callback closeProgram();
+    callback mouseMove(length, length);
 
-    InnerBorder {
+    TouchArea {
+        y: 0;
+        height: 40px;
+        Rectangle {
+            background: #010409;
+            OuterBorder {
+                padding-width: -1px;
+                width: parent.width;
+                height: parent.height;
+                border-color: rgb(61, 68, 77);
+            }
+        }
+
+        moved => {
+            if (self.pressed) {
+                root.mouseMove((self.mouse_x) - self.pressed_x, (self.mouse_y) - self.pressed_y);
+            }
+        }
+    }
+
+    OuterBorder {
+        padding-width: -1px;
         width: parent.width;
         height: parent.height;
-        background-color: rgb(13, 17, 23);
         border-color: rgb(61, 68, 77);
     }
 
     Text {
         text: "Exam Controller";
-        font-size: 32px;
-        y: 10px;
+        font-size: 28px;
+        y: 3px;
     }
 
     ImageButton {
