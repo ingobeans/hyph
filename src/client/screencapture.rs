@@ -48,7 +48,7 @@ fn take_screenshot(save_path: &PathBuf) {
         .unwrap();
 }
 
-fn start_screencapture_thread(save_path: PathBuf) -> (JoinHandle<()>, Sender<()>) {
+pub fn start_screencapture_thread(save_path: PathBuf) -> (JoinHandle<()>, Sender<()>) {
     let (tx, rx) = mpsc::channel();
     let handle = thread::spawn(move || {
         loop {
@@ -64,17 +64,4 @@ fn start_screencapture_thread(save_path: PathBuf) -> (JoinHandle<()>, Sender<()>
         }
     });
     (handle, tx)
-}
-
-fn main() {
-    let (handle, tx) = start_screencapture_thread("capture/".into());
-
-    println!("press enter to stop thread: ");
-    let mut line = String::new();
-    let stdin = std::io::stdin();
-    let _ = stdin.lock().read_line(&mut line);
-
-    let _ = tx.send(());
-
-    handle.join().unwrap();
 }
