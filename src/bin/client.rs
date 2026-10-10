@@ -68,6 +68,7 @@ fn main() -> std::io::Result<()> {
     app.on_ping_click(move || {
         let c = c.clone();
         let handle = handle.clone();
+        let mut addr = String::new();
         if let Some(handle) = handle.upgrade() {
             handle.set_ping_enabled(false);
             handle.set_ping_success(false);
@@ -76,8 +77,8 @@ fn main() -> std::io::Result<()> {
             handle.set_start_exam_fail(false);
 
             let mut c = c.lock().unwrap();
-            c.addr = format!("{}:{}", handle.get_ip_address(), PORT);
-            println!("{}", c.addr);
+            addr = format!("{}:{}", handle.get_ip_address(), PORT);
+            c.addr = addr.clone();
         }
 
         let future = async move {
@@ -85,11 +86,15 @@ fn main() -> std::io::Result<()> {
                 let c = c.lock().unwrap();
                 c.ping_server().await.is_ok()
             };
-            println!("{state}");
+
             if let Some(handle) = handle.upgrade() {
                 handle.set_ping_enabled(true);
                 handle.set_ping_success(state);
                 handle.set_ping_fail(!state);
+
+                if state {
+                    println!("Connected to: {}", addr)
+                };
             }
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
@@ -118,12 +123,13 @@ fn main() -> std::io::Result<()> {
                 }
                 state
             };
-            println!("{state}");
+
             if let Some(handle) = handle.upgrade() {
                 handle.set_start_exam_success(state);
                 handle.set_start_exam_fail(!state);
                 if state {
                     handle.set_exam_active(true);
+                    println!("Started exam.");
                 } else {
                     handle.set_ping_enabled(true);
                     handle.set_start_exam_enabled(true);
@@ -181,7 +187,7 @@ fn main() -> std::io::Result<()> {
                     false
                 }
             };
-            println!("{state}");
+
             if let Some(handle) = handle.upgrade() {
                 handle.set_submit_exam_success(state);
                 handle.set_submit_exam_fail(!state);
@@ -191,6 +197,7 @@ fn main() -> std::io::Result<()> {
                             .to_shared_string(),
                     );
                     handle.set_exam_active(false);
+                    println!("Sucessfully submitted exam.");
                 } else {
                     handle.set_submit_exam_status("Failed to upload exam.".to_shared_string());
                     handle.set_exam_stopped(false);
