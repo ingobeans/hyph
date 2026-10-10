@@ -53,11 +53,13 @@ slint::slint! {
         height: 30px;
         in property <length> padding-width: 8px;
         out property <string> out-text;
+        in property <bool> enabled;
         TextInput {
             width: (parent.width) - root.padding-width;
             height: (parent.height) - root.padding-width;
             single-line: true;
             font-size: 20px;
+            enabled: root.enabled;
             changed text => {
                 parent.out-text = self.text;
             };
@@ -79,10 +81,14 @@ slint::slint! {
 
         in property <string> username: "Logged in as: USER";
         in property <bool> ping-enabled: true;
+        in property <bool> start-exam-enabled: true;
+
         in property <bool> ping-success: false;
         in property <bool> ping-fail: false;
+
         out property <string> ip_address;
         callback pingClick();
+        callback startExamClick();
 
         InnerBorder {
             width: parent.width;
@@ -110,6 +116,7 @@ slint::slint! {
                 width: 420px;
                 padding-width: 8px;
                 y: -4px;
+                enabled: root.start-exam-enabled;
                 changed out-text => {
                     root.ip_address = self.out-text;
                 }
@@ -149,12 +156,13 @@ slint::slint! {
             alignment:start;
             spacing: 10px;
             Button {
-                enabled: root.ping-success && root.ping-enabled;
+                enabled: root.ping-success && root.ping-enabled && root.start-exam-enabled;
                 width: 240px;
                 height: 40px;
                 y:-8px;
                 text: "Start Exam";
                 primary: true;
+                clicked => startExamClick();
             }
         }
     }
