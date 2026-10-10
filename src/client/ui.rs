@@ -45,6 +45,9 @@ slint::slint! {
             background: parent.border-color;
         }
     }
+    component Container {
+        @children
+    }
     component LineInput {
         width: 260px;
         height: 30px;
@@ -75,8 +78,9 @@ slint::slint! {
         height: 450px;
 
         in property <string> username: "Logged in as: USER";
-        in property <string> ping-state: "";
         in property <bool> ping-enabled: true;
+        in property <bool> ping-success: false;
+        in property <bool> ping-fail: false;
         out property <string> ip_address;
         callback pingClick();
 
@@ -117,6 +121,23 @@ slint::slint! {
                 text: "Ping server";
                 clicked => pingClick();
             }
+            Container {
+                width: 30px;
+                Image {
+                    height: 30px;
+                    width: 30px;
+                    y:-5px;
+                    visible: root.ping-success;
+                    source: @image-url("assets/check.png");
+                }
+                Image {
+                    height: 30px;
+                    width: 30px;
+                    y:-5px;
+                    visible: root.ping-fail;
+                    source: @image-url("assets/fail.png");
+                }
+            }
         }
         Text {
             text: username;
@@ -135,11 +156,6 @@ slint::slint! {
                 text: "Start Exam";
                 primary: true;
             }
-        }
-
-        Text {
-            y: 140px;
-            text: parent.ping-state;
         }
     }
 }
