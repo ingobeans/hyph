@@ -92,6 +92,7 @@ slint::slint! {
         out property <string> ip_address;
         callback pingClick();
         callback startExamClick();
+        callback closeProgram();
 
         InnerBorder {
             width: parent.width;
@@ -104,6 +105,16 @@ slint::slint! {
             text: "Exam Controller";
             font-size: 32px;
             y: 10px;
+        }
+
+        Button {
+            enabled: start-exam-enabled;
+            width: 30px;
+            height: 30px;
+            x: (parent.width) - (self.width) - 10px;
+            y:10px;
+            text: "X";
+            clicked => closeProgram();
         }
 
         HorizontalLayout {

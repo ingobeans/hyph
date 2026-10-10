@@ -23,6 +23,13 @@ fn main() -> std::io::Result<()> {
     
     let app_handle = Rc::new(app.as_weak());
 
+    let handle = app_handle.clone();
+    app.on_closeProgram(move || {
+        if let Some(handle) = handle.upgrade() {
+            handle.window().hide().unwrap();
+        }
+    });
+
     let c = client_rc.clone();
     let handle = app_handle.clone();
     app.on_pingClick(move || {
