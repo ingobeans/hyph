@@ -69,8 +69,8 @@ fn main() -> std::io::Result<()> {
             println!("{state}");
             if let Some(handle) = handle.upgrade() {
                 handle.set_ping_enabled(true);
-                handle.set_ping_success(state);
-                handle.set_ping_fail(!state);
+                handle.set_start_exam_success(state);
+                handle.set_start_exam_fail(!state);
             }
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();

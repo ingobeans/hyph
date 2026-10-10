@@ -86,6 +86,9 @@ slint::slint! {
         in property <bool> ping-success: false;
         in property <bool> ping-fail: false;
 
+        in property <bool> start-exam-success: false;
+        in property <bool> start-exam-fail: false;
+
         out property <string> ip_address;
         callback pingClick();
         callback startExamClick();
@@ -163,6 +166,23 @@ slint::slint! {
                 text: "Start Exam";
                 primary: true;
                 clicked => startExamClick();
+            }
+            Container {
+                width: 30px;
+                Image {
+                    height: 30px;
+                    width: 30px;
+                    y:-5px;
+                    visible: root.start-exam-success;
+                    source: @image-url("assets/check.png");
+                }
+                Image {
+                    height: 30px;
+                    width: 30px;
+                    y:-5px;
+                    visible: root.start-exam-fail;
+                    source: @image-url("assets/fail.png");
+                }
             }
         }
     }
