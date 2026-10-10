@@ -96,7 +96,7 @@ fn main() -> std::io::Result<()> {
                 let mut c = c.lock().unwrap();
                 let state = c.register(&name).await.is_ok_and(|f| f);
                 if state {
-                    let thread = start_screencapture_thread("capture/".into());
+                    let thread = start_screencapture_thread("capture/".into(), "output.bin".into());
                     c.screen_capture_thread = Some(thread);
                 }
                 state
@@ -143,7 +143,7 @@ fn main() -> std::io::Result<()> {
                             break;
                         }
                     }
-                    c.send_file_to_server("dummy.bin").await.is_ok()
+                    c.send_file_to_server("output.bin").await.is_ok()
                 } else {
                     false
                 }
@@ -163,15 +163,5 @@ fn main() -> std::io::Result<()> {
     });
 
     app.run().unwrap();
-
-    // let server_accessible = client.ping_server().is_ok();
-    // if !server_accessible {
-    //     println!("server is inaccessible");
-    //     return Ok(());
-    // }
-    // let success = client.register("my cool name")?;
-    // println!("{success}");
-    // client.send_file_to_server("dummy.bin")?;
-    // println!("succesfully transmitted dummy.bin to server");
     Ok(())
 }

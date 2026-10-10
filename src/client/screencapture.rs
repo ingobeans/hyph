@@ -10,6 +10,7 @@ use ab_glyph::FontRef;
 use chrono::Local;
 use image::{DynamicImage, Rgba, RgbaImage};
 use win_screenshot::prelude::*;
+use zip::write::SimpleFileOptions;
 
 fn take_screenshot(save_path: &PathBuf) {
     let buf = capture_display().unwrap();
@@ -48,20 +49,61 @@ fn take_screenshot(save_path: &PathBuf) {
         .unwrap();
 }
 
-pub fn start_screencapture_thread(save_path: PathBuf) -> (JoinHandle<()>, Sender<()>) {
+pub fn start_screencapture_thread(
+    save_dir: PathBuf,
+    output_path: PathBuf,
+) -> (JoinHandle<()>, Sender<()>) {
     let (tx, rx) = mpsc::channel();
     let handle = thread::spawn(move || {
         loop {
+            // stop screen capture when message is received over rx.
             match rx.try_recv() {
                 Ok(_) | Err(TryRecvError::Disconnected) => {
-                    println!("stopping screen capture.");
                     break;
                 }
                 Err(TryRecvError::Empty) => {}
             }
-            take_screenshot(&save_path);
+            take_screenshot(&save_dir);
+
+            // arbitrary delay
             thread::sleep(Duration::from_secs(2));
         }
+
+        println!("stopped screen capture. attempting to compile video data.");
+
+        let file = std::fs::File::create(output_path)
+            .expect("Couldn't create screen capture output file.");
+        let mut zip = zip::ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+
+        for item in std::fs::read_dir(&save_dir).unwrap().flatten() {
+            let Ok(filetype) = item.file_type() else {
+                continue;
+            };
+            if filetype.is_dir() {
+                continue;
+            }
+            if !item.file_name().to_string_lossy().ends_with(".jpg") {
+                continue;
+            }
+
+            let path = item.path();
+            let path_stripped = path.strip_prefix(&save_dir).unwrap();
+            let Some(path_as_string) = path_stripped.to_str().map(str::to_owned) else {
+                continue;
+            };
+
+            if zip.start_file(&path_as_string, options).is_err() {
+                continue;
+            }
+            let Ok(mut f) = std::fs::File::open(path) else {
+                continue;
+            };
+            let _ = std::io::copy(&mut f, &mut zip);
+        }
+
+        zip.finish().expect("Couldn't save screep capture ZIP");
+        println!("finished saving video data ZIP.");
     });
     (handle, tx)
 }
