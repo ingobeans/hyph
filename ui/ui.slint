@@ -158,6 +158,8 @@ export component App inherits Window {
     in property <bool> exam-active: false;
     in property <bool> exam-stopped: false;
 
+    in property <string> submit-exam-status: "";
+
     out property <string> ip_address;
     callback pingClick();
     callback startExamClick();
@@ -273,6 +275,11 @@ export component App inherits Window {
                 source: @image-url("assets/fail.png");
             }
         }
+    }
+
+    Text {
+        text: root.submit-exam-status;
+        y: 245px;
     }
 
     HorizontalLayout {

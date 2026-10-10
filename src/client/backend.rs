@@ -1,18 +1,23 @@
 use std::fs;
 use std::io::{self, prelude::*};
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
+use crate::screencapture::ScreenCaptureStateMessage;
 use crate::utils::*;
 
 pub struct Client {
     pub addr: String,
     pub id: u64,
     pub temp_dir_name: String,
-    pub screen_capture_thread: Option<(JoinHandle<()>, Sender<()>)>,
+    pub screen_capture_thread: Option<(
+        JoinHandle<()>,
+        Sender<()>,
+        Receiver<ScreenCaptureStateMessage>,
+    )>,
 }
 impl Client {
     pub fn new(addr: String) -> Self {

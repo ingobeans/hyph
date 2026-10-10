@@ -1,7 +1,6 @@
 use std::{
-    io::BufRead,
     path::PathBuf,
-    sync::mpsc::{self, Sender, TryRecvError},
+    sync::mpsc::{self, Receiver, Sender, TryRecvError},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -49,27 +48,40 @@ fn take_screenshot(save_path: &PathBuf) {
         .unwrap();
 }
 
+pub enum ScreenCaptureStateMessage {
+    FrameTaken,
+    Stopped,
+    // FinishedCompilingVideoData,
+}
+
 pub fn start_screencapture_thread(
     save_dir: PathBuf,
     output_path: PathBuf,
-) -> (JoinHandle<()>, Sender<()>) {
-    let (tx, rx) = mpsc::channel();
+) -> (
+    JoinHandle<()>,
+    Sender<()>,
+    Receiver<ScreenCaptureStateMessage>,
+) {
+    let (terminate_tx, terminate_rx) = mpsc::channel();
+    let (status_tx, status_rx) = mpsc::channel();
     let handle = thread::spawn(move || {
         loop {
             // stop screen capture when message is received over rx.
-            match rx.try_recv() {
+            match terminate_rx.try_recv() {
                 Ok(_) | Err(TryRecvError::Disconnected) => {
                     break;
                 }
                 Err(TryRecvError::Empty) => {}
             }
             take_screenshot(&save_dir);
+            let _ = status_tx.send(ScreenCaptureStateMessage::FrameTaken);
 
             // arbitrary delay
             thread::sleep(Duration::from_secs(2));
         }
 
         println!("stopped screen capture. attempting to compile video data.");
+        let _ = status_tx.send(ScreenCaptureStateMessage::Stopped);
 
         let file = std::fs::File::create(output_path)
             .expect("Couldn't create screen capture output file.");
@@ -105,5 +117,5 @@ pub fn start_screencapture_thread(
         zip.finish().expect("Couldn't save screep capture ZIP");
         println!("finished saving video data ZIP.");
     });
-    (handle, tx)
+    (handle, terminate_tx, status_rx)
 }
