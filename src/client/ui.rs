@@ -107,15 +107,43 @@ slint::slint! {
             y: 10px;
         }
 
-        Button {
+        TouchArea {
             enabled: start-exam-enabled;
             width: 30px;
             height: 30px;
-            x: (parent.width) - (self.width) - 10px;
-            y:10px;
-            text: "X";
+            x: (parent.width) - (self.width) - 5px;
+            y:5px;
+            
+            img:=Image {
+                width: parent.width;
+                height: parent.height;
+                source: @image-url("assets/close.png");
+                colorize: white;
+            }
+
+            changed has-hover => {
+                if (self.pressed) {
+                    img.colorize = #a0a0a0;
+                } else if (self.has-hover) {
+                    img.colorize = #b4b4b4;
+                } else {
+                    img.colorize = white;
+                }
+            }
+
+            pointer-event() => {
+                if (self.pressed) {
+                    img.colorize = #a0a0a0;
+                } else if (self.has-hover) {
+                    img.colorize = #b4b4b4;
+                } else {
+                    img.colorize = white;
+                }
+            }
+
             clicked => closeProgram();
         }
+        
 
         HorizontalLayout {
             y: 80px;
