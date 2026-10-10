@@ -104,7 +104,9 @@ fn main() -> std::io::Result<()> {
             if let Some(handle) = handle.upgrade() {
                 handle.set_start_exam_success(state);
                 handle.set_start_exam_fail(!state);
-                if !state {
+                if state {
+                    handle.set_exam_active(true);
+                } else {
                     handle.set_ping_enabled(true);
                     handle.set_start_exam_enabled(true);
                 }
