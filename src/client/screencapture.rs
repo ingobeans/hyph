@@ -21,7 +21,7 @@ fn take_screenshot(save_path: &PathBuf) {
     let unix_time = date.timestamp();
     let time_text = format!("{}", date.format("%H:%M:%S"));
 
-    let font = FontRef::try_from_slice(include_bytes!("../../assets/DejaVuSans.ttf")).unwrap();
+    let font = FontRef::try_from_slice(include_bytes!("../../ui/assets/DejaVuSans.ttf")).unwrap();
 
     let x = img.width() - 200;
     imageproc::drawing::draw_text_mut(

@@ -2,7 +2,7 @@ use std::{rc::Rc, sync::Mutex};
 
 use slint::ToSharedString;
 
-use crate::{backend::*, screencapture::*, ui::*, utils::*};
+use crate::{backend::*, screencapture::*, utils::*};
 
 #[path = "../utils.rs"]
 mod utils;
@@ -11,9 +11,8 @@ mod utils;
 mod backend;
 #[path = "../client/screencapture.rs"]
 mod screencapture;
-#[path = "../client/ui.rs"]
-mod ui;
 
+slint::include_modules!();
 fn main() -> std::io::Result<()> {
     let name = whoami::realname()?;
     let client = Client::new(String::new());
