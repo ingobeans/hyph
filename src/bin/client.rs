@@ -341,18 +341,16 @@ async fn submit_exam(c: Rc<Mutex<Client>>, folder: Option<PathBuf>, handle: Rc<s
             );
 
             // immediately back up submission to prevent tampering
-            if let Some(folder) = folder {
-                if let Err(err) = backup_failed_submission("exam_data/".into(), folder).await {
-                    handle.set_submit_exam_status(
-                        format!(
-                            "Failed to upload exam. Failed to back up exam submission. {err:?}"
-                        )
+            if let Some(folder) = folder
+                && let Err(err) = backup_failed_submission("exam_data/".into(), folder).await
+            {
+                handle.set_submit_exam_status(
+                    format!("Failed to upload exam. Failed to back up exam submission. {err:?}")
                         .to_shared_string(),
-                    );
-                    // if backing up exam submission fails, return so that set_exam_stopped is never called,
-                    // so that the user can't press the submit button again
-                    return;
-                }
+                );
+                // if backing up exam submission fails, return so that set_exam_stopped is never called,
+                // so that the user can't press the submit button again
+                return;
             }
             handle.set_submit_exam_status("Failed to upload exam. Retry?".to_shared_string());
             handle.set_exam_stopped(false);

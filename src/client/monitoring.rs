@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, hash_map::Entry},
-    io::Read,
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender, TryRecvError},
     thread::{self, JoinHandle},
@@ -240,6 +239,7 @@ pub fn start_monitoring_thread(
 pub enum RetrySubmissionError {
     /// There's nothing that can be done. Exam is fully corrupted
     CriticalFail,
+    #[allow(dead_code)]
     IoError(std::io::Error),
     ZipFail,
 }
