@@ -11,9 +11,8 @@ use chrono::Local;
 use clonetree::clone_tree;
 use image::{DynamicImage, Rgba, RgbaImage};
 use list_windows::*;
-use walkdir::WalkDir;
+use ripzip::{NoProgress, compress_directory};
 use win_screenshot::prelude::*;
-use zip::{result::ZipError, write::SimpleFileOptions};
 
 use crate::utils::*;
 
@@ -202,7 +201,14 @@ fn run_monitoring(
         .map_err(std::io::Error::other)?;
 
     let now = Instant::now();
-    zip_dir(exam_data_dir, output_path).or(Err(std::io::Error::other("Couldn't zip dir.")))?;
+    compress_directory(
+        exam_data_dir,
+        output_path,
+        1,
+        ripzip::CompressionMethod::Deflate,
+        &NoProgress,
+    )
+    .or(Err(std::io::Error::other("Couldn't zip dir.")))?;
     let after = Instant::now();
     println!(
         "zipping took: {}",
@@ -259,7 +265,14 @@ pub fn retry_failed_submission(
             Err(RetrySubmissionError::CriticalFail)?;
         }
 
-        zip_dir(&exam_data_dir, &output_path).or(Err(RetrySubmissionError::ZipFail))?;
+        compress_directory(
+            &exam_data_dir,
+            &output_path,
+            1,
+            ripzip::CompressionMethod::Deflate,
+            &NoProgress,
+        )
+        .or(Err(RetrySubmissionError::ZipFail))?;
 
         Ok(())
     })
@@ -307,56 +320,5 @@ async fn async_copy_dir_slow(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> st
             std::fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
         }
     }
-    Ok(())
-}
-
-// joinked directly from the zip crate examples: https://github.com/zip-rs/zip2/blob/master/examples/write_dir.rs#L78
-pub fn zip_dir(src_dir: &Path, dest_file: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    if !Path::new(src_dir).is_dir() {
-        return Err(ZipError::FileNotFound.into());
-    }
-
-    let file = std::fs::File::create(dest_file)?;
-
-    let walkdir = WalkDir::new(src_dir);
-
-    let mut zip = zip::ZipWriter::new(file);
-
-    // use lower level on compression for jpgs since theyre already compressed,
-    // while other files (like text & code) give better results with compression
-    let jpg_options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated)
-        .compression_level(Some(1));
-    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-
-    for entry_result in walkdir.into_iter() {
-        let entry = match entry_result {
-            Ok(entry) => entry,
-            Err(e) => {
-                return Err(format!("Error while traversing directory {src_dir:?}: {e}").into());
-            }
-        };
-        let path = entry.path();
-        let path_stripped = path.strip_prefix(src_dir)?;
-        let path_as_string = path_stripped
-            .to_str()
-            .map(str::to_owned)
-            .ok_or_else(|| format!("{:?} is a Non UTF-8 Path", path_stripped.display()))?;
-
-        if path.is_file() {
-            let options = if path_as_string.ends_with(".jpg") {
-                jpg_options
-            } else {
-                options
-            };
-            zip.start_file(path_as_string, options)?;
-            let mut f = std::fs::File::open(path)?;
-
-            std::io::copy(&mut f, &mut zip)?;
-        } else if !path_stripped.as_os_str().is_empty() {
-            zip.add_directory(path_as_string, options)?;
-        }
-    }
-    zip.finish()?;
     Ok(())
 }

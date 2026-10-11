@@ -1,6 +1,6 @@
 [package]
 name = "hyph"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2024"
 build = "build.rs"
 
@@ -25,13 +25,10 @@ image = "0.25.10"
 imageproc = "0.27.0"
 ab_glyph = "0.2.32"
 chrono = "0.4.45"
-zip = { version = "9.0.1", features = [
-    "deflate-flate2",
-], default-features = false }
 rfd = "0.17.2"
 clonetree = "0.0.2"
-walkdir = "2.5.0"
 winapi = { version = "0.3.9", features = ["winuser"] }
+ripzip = "0.1.0"
 
 [build-dependencies]
 slint-build = "1.18.1"
