@@ -247,7 +247,6 @@ pub enum RetrySubmissionError {
 pub fn retry_failed_submission(
     exam_data_dir: PathBuf,
     output_path: PathBuf,
-    submission_dir: PathBuf,
 ) -> JoinHandle<Result<(), RetrySubmissionError>> {
     thread::spawn(move || {
         if !exam_data_dir.exists() {
@@ -255,13 +254,9 @@ pub fn retry_failed_submission(
         }
 
         let new_submission_dir = exam_data_dir.join("submission");
-        if new_submission_dir.exists() {
-            std::fs::remove_dir_all(&new_submission_dir).map_err(RetrySubmissionError::IoError)?;
+        if !new_submission_dir.exists() {
+            Err(RetrySubmissionError::CriticalFail)?;
         }
-
-        // don't use clonetree in case it was the issue,
-        // instead retry with a more simple/robust method of cloning a tree
-        copy_dir_slow(submission_dir, new_submission_dir).map_err(RetrySubmissionError::IoError)?;
 
         zip_dir(
             &exam_data_dir,
@@ -274,17 +269,44 @@ pub fn retry_failed_submission(
     })
 }
 
+pub async fn backup_failed_submission(
+    exam_data_dir: PathBuf,
+    submission_dir: PathBuf,
+) -> Result<(), RetrySubmissionError> {
+    if !exam_data_dir.exists() {
+        Err(RetrySubmissionError::CriticalFail)?;
+    }
+
+    let new_submission_dir = exam_data_dir.join("submission");
+    if new_submission_dir.exists() {
+        tokio::fs::remove_dir_all(&new_submission_dir)
+            .await
+            .map_err(RetrySubmissionError::IoError)?;
+    }
+
+    // don't use clonetree for safety, just in case it was the issue,
+    // instead retry with a more simple/robust method of cloning a tree (which also happens to be async)
+    async_copy_dir_slow(submission_dir, new_submission_dir)
+        .await
+        .map_err(RetrySubmissionError::IoError)?;
+    Ok(())
+}
+
 /// Copies a directory recursively.
 /// Only used if clonetree failed
 ///
 /// (clonetree is much faster since it does filesystem tomfoolery to copy the directory, while this actually copies every file making it more robust)
-fn copy_dir_slow(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
+async fn async_copy_dir_slow(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
     std::fs::create_dir_all(&dst)?;
     for entry in std::fs::read_dir(src)? {
         let entry = entry?;
         let ty = entry.file_type()?;
         if ty.is_dir() {
-            copy_dir_slow(entry.path(), dst.as_ref().join(entry.file_name()))?;
+            Box::pin(async_copy_dir_slow(
+                entry.path(),
+                dst.as_ref().join(entry.file_name()),
+            ))
+            .await?;
         } else {
             std::fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
         }

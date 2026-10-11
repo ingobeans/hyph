@@ -187,11 +187,24 @@ fn main() -> std::io::Result<()> {
     let c = client_rc.clone();
     let handle = app_handle.clone();
     app.on_submit_exam_click(move || {
-        let Some(folder) = FileDialog::new().pick_folder() else {
-            return;
+        let c = c.clone();
+
+        // if this is first submission, open file picker dialog.
+        // else, if user is retrying after a failed submission, get None.
+        let folder = {
+            let previous_submission_failed =
+                { matches!(c.lock().unwrap().monitoring_thread, MonitoringState::Ended) };
+            if previous_submission_failed {
+                None
+            } else {
+                let Some(folder) = FileDialog::new().pick_folder() else {
+                    // if user cancels, just return.
+                    return;
+                };
+                Some(folder)
+            }
         };
 
-        let c = c.clone();
         let handle = handle.clone();
         if let Some(handle) = handle.upgrade() {
             handle.set_ping_enabled(false);
@@ -201,7 +214,7 @@ fn main() -> std::io::Result<()> {
             handle.set_submit_exam_status("Stopping exam...".to_shared_string());
         }
 
-        let future = submit_exam(c, folder.clone(), handle);
+        let future = submit_exam(c, folder, handle);
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
     });
 
@@ -209,7 +222,7 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-async fn submit_exam(c: Rc<Mutex<Client>>, folder: PathBuf, handle: Rc<slint::Weak<App>>) {
+async fn submit_exam(c: Rc<Mutex<Client>>, folder: Option<PathBuf>, handle: Rc<slint::Weak<App>>) {
     let state = {
         let mut c = c.lock().unwrap();
         match c.monitoring_thread.take() {
@@ -218,10 +231,9 @@ async fn submit_exam(c: Rc<Mutex<Client>>, folder: PathBuf, handle: Rc<slint::We
                 false
             }
             MonitoringState::Ended => {
-                let join_handle =
-                    retry_failed_submission("exam_data/".into(), "output.bin".into(), folder);
+                let join_handle = retry_failed_submission("exam_data/".into(), "output.bin".into());
                 if let Some(handle) = handle.upgrade() {
-                    handle.set_submit_exam_status("Retrying exam submission".to_shared_string());
+                    handle.set_submit_exam_status("Retrying exam submission...".to_shared_string());
                 }
                 loop {
                     sleep(Duration::from_millis(500)).await;
@@ -247,6 +259,9 @@ async fn submit_exam(c: Rc<Mutex<Client>>, folder: PathBuf, handle: Rc<slint::We
                     if monitoring_thread.join_handle.is_finished() {
                         break 'handle_thread_stop;
                     }
+
+                    // unwrap is safe because folder can only be none if monitoring state is Ended.
+                    let folder = folder.clone().unwrap();
 
                     // send over tx to tell thread to terminate,
                     // and check for error
@@ -321,7 +336,25 @@ async fn submit_exam(c: Rc<Mutex<Client>>, folder: PathBuf, handle: Rc<slint::We
             handle.set_exam_active(false);
             println!("Sucessfully submitted exam.");
         } else {
-            handle.set_submit_exam_status("Failed to upload exam.".to_shared_string());
+            handle.set_submit_exam_status(
+                "Failed to upload exam. Backing up exam submission...".to_shared_string(),
+            );
+
+            // immediately back up submission to prevent tampering
+            if let Some(folder) = folder {
+                if let Err(err) = backup_failed_submission("exam_data/".into(), folder).await {
+                    handle.set_submit_exam_status(
+                        format!(
+                            "Failed to upload exam. Failed to back up exam submission. {err:?}"
+                        )
+                        .to_shared_string(),
+                    );
+                    // if backing up exam submission fails, return so that set_exam_stopped is never called,
+                    // so that the user can't press the submit button again
+                    return;
+                }
+            }
+            handle.set_submit_exam_status("Failed to upload exam. Retry?".to_shared_string());
             handle.set_exam_stopped(false);
         }
     }
