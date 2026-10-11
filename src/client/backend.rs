@@ -1,5 +1,4 @@
-use std::fs;
-use std::io::{self, prelude::*};
+use std::io::{self, Read};
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
@@ -15,7 +14,7 @@ pub struct Client {
     pub id: u64,
     pub temp_dir_name: String,
     pub screen_capture_thread: Option<(
-        JoinHandle<()>,
+        JoinHandle<io::Result<()>>,
         Sender<PathBuf>,
         Receiver<ScreenCaptureStateMessage>,
     )>,
@@ -67,7 +66,7 @@ impl Client {
         self.send_packet_header(&mut stream, ClientMessageType::Transmit)
             .await?;
 
-        let mut file = fs::File::open(filepath)?;
+        let mut file = std::fs::File::open(filepath)?;
         let mut buf = [0u8; 8192];
         loop {
             let len = file.read(&mut buf)?;

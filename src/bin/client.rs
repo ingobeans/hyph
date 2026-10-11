@@ -160,38 +160,74 @@ fn main() -> std::io::Result<()> {
 
         let future = async move {
             let state = {
-                let c = c.lock().unwrap();
+                let mut c = c.lock().unwrap();
                 if let Some((join_handle, tx, rx)) = &c.screen_capture_thread {
-                    // send over tx to tell thread to terminate
-                    let _ = tx.send(folder.clone());
+                    'handle_thread_stop: {
+                        // check if thread has already died from an error
+                        if join_handle.is_finished() {
+                            break 'handle_thread_stop;
+                        }
 
-                    // wait for thread to completely finish
-                    loop {
-                        print!(".");
-                        sleep(Duration::from_millis(500)).await;
+                        // send over tx to tell thread to terminate,
+                        // and check for error
+                        if let Err(e) = tx.send(folder.clone()) {
+                            println!("error sending termination to screen_capture_thread: {e}");
+                            if let Some(handle) = handle.upgrade() {
+                                handle.set_submit_exam_status(
+                                    format!("Error ending exam: {e}").to_shared_string(),
+                                );
+                            }
+                            break 'handle_thread_stop;
+                        }
 
-                        // meanwhile, also check for status update messages
-                        if let Ok(message) = rx.try_recv() {
-                            let message = match message {
-                                ScreenCaptureStateMessage::Stopped => Some("Saving submission..."),
-                                ScreenCaptureStateMessage::FinishedSavingSubmission => {
-                                    Some("Compressing exam data...")
+                        // wait for thread to completely finish
+                        loop {
+                            print!(".");
+                            sleep(Duration::from_millis(500)).await;
+
+                            // meanwhile, also check for status update messages
+                            if let Ok(message) = rx.try_recv() {
+                                let message = match message {
+                                    ScreenCaptureStateMessage::Stopped => {
+                                        Some("Saving submission...")
+                                    }
+                                    ScreenCaptureStateMessage::FinishedSavingSubmission => {
+                                        Some("Compressing exam data...")
+                                    }
+                                };
+                                if let Some(message) = message
+                                    && let Some(handle) = handle.upgrade()
+                                {
+                                    handle.set_submit_exam_status(message.to_shared_string())
                                 }
-                                _ => None,
-                            };
-                            if let Some(message) = message
-                                && let Some(handle) = handle.upgrade()
-                            {
-                                println!("{message}");
-                                handle.set_submit_exam_status(message.to_shared_string())
+                            }
+
+                            if join_handle.is_finished() {
+                                break 'handle_thread_stop;
                             }
                         }
-
-                        if join_handle.is_finished() {
-                            break;
-                        }
                     }
+
+                    // check that the thread exited sucessfully
+
+                    // take ownership of thread
+
+                    // unwrap is safe because we already checked that it is some through the if let
+                    let thread = c.screen_capture_thread.take().unwrap().0;
+                    // unwrap is safe since we only break if join handle is finished
+                    let result = thread.join().unwrap();
+
                     if let Some(handle) = handle.upgrade() {
+                        if let Err(err) = result {
+                            handle.set_submit_exam_success(false);
+                            handle.set_submit_exam_fail(true);
+                            handle.set_exam_stopped(false);
+                            handle.set_submit_exam_status(
+                                format!("Error saving exam data: {err:?}").to_shared_string(),
+                            );
+                            return;
+                        }
+
                         handle.set_submit_exam_status(
                             "Transmitting exam data to server...".to_shared_string(),
                         );
