@@ -156,19 +156,19 @@ fn main() -> std::io::Result<()> {
                             let message = match message {
                                 MonitoringLoggingMessage::ScreenshotError(err) => {
                                     let date = Local::now();
-                                    let time_text = format!("{}", date.format("%H:%M:%S"));
-                                    format!("Error encountered while monitoring exam: {err:?} ({time_text})").to_shared_string()
-                                },
+                                    let text: String = format!("{}", date.format("%H:%M:%S"));
+                                    format!(
+                                        "Error encountered while monitoring exam: {err:?} ({text})"
+                                    )
+                                    .to_shared_string()
+                                }
                                 MonitoringLoggingMessage::ListProgramsError => {
-                                    format!("Error encountered while monitoring exam").to_shared_string()
-                                
-                                },
+                                    "Error encountered while monitoring exam".to_shared_string()
+                                }
                             };
-                                
+
                             if let Some(handle) = handle.upgrade() {
-                                handle.set_monitoring_logging(
-                                    message
-                                );
+                                handle.set_monitoring_logging(message);
                             }
                         }
                         Err(TryRecvError::Disconnected) => {

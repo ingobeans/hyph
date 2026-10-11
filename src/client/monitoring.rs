@@ -15,12 +15,9 @@ use walkdir::WalkDir;
 use win_screenshot::prelude::*;
 use zip::{result::ZipError, write::SimpleFileOptions};
 
-use crate::utils::{OpenedWindows, serialize_opened_windows};
+use crate::utils::*;
 
 mod list_windows;
-
-/// Take a screenshot every n seconds
-pub const SCREENSHOT_INTERVAL: u8 = 2;
 
 pub struct MonitoringThread {
     pub join_handle: JoinHandle<std::io::Result<()>>,

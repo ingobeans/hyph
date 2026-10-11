@@ -1,10 +1,14 @@
-use std::collections::HashMap;
+#![allow(dead_code)]
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+use std::collections::HashMap;
 
 pub const PORT: u16 = 56863;
 pub const MAX_NAME_LENGTH: usize = 32;
+
+/// Take a screenshot every n seconds
+pub const SCREENSHOT_INTERVAL: u8 = 2;
 
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
 pub enum ClientMessageType {
