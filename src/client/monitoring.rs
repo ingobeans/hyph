@@ -55,16 +55,16 @@ fn take_screenshot(save_path: &PathBuf) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-pub enum ScreenCaptureStateMessage {
+pub enum MonitoringStateMessage {
     // FrameTaken,
     Stopped,
     FinishedSavingSubmission,
     // FinishedCompilingVideoData,
 }
 
-fn run_screencapture(
+fn run_monitoring(
     exam_data_dir: &PathBuf,
-    status_tx: Sender<ScreenCaptureStateMessage>,
+    status_tx: Sender<MonitoringStateMessage>,
     terminate_rx: Receiver<PathBuf>,
     output_path: &PathBuf,
 ) -> std::io::Result<()> {
@@ -72,7 +72,7 @@ fn run_screencapture(
     std::fs::create_dir_all(&captures_save_dir)?;
 
     let submission_dir = loop {
-        // stop screen capture when message is received over rx.
+        // stop monitoring when message is received over rx.
         // the message also contains a user submitted pathbuf to their
         // exam submission.
         match terminate_rx.try_recv() {
@@ -86,15 +86,13 @@ fn run_screencapture(
         }
         take_screenshot(&captures_save_dir)?;
 
-        // status_tx.send(ScreenCaptureStateMessage::FrameTaken);
-
         // arbitrary delay
         thread::sleep(Duration::from_secs(2));
     };
 
-    println!("stopped screen capture. attempting to zip exam data (screen capture + submission).");
+    println!("stopped monitoring. attempting to zip exam data (screen capture + submission).");
     status_tx
-        .send(ScreenCaptureStateMessage::Stopped)
+        .send(MonitoringStateMessage::Stopped)
         .map_err(std::io::Error::other)?;
 
     // copy exam submission directory
@@ -110,7 +108,7 @@ fn run_screencapture(
     .map_err(std::io::Error::other)?;
 
     status_tx
-        .send(ScreenCaptureStateMessage::FinishedSavingSubmission)
+        .send(MonitoringStateMessage::FinishedSavingSubmission)
         .map_err(std::io::Error::other)?;
 
     zip_dir(
@@ -124,18 +122,18 @@ fn run_screencapture(
     Ok(())
 }
 
-pub fn start_screencapture_thread(
+pub fn start_monitoring_thread(
     exam_data_dir: PathBuf,
     output_path: PathBuf,
 ) -> (
     JoinHandle<std::io::Result<()>>,
     Sender<PathBuf>,
-    Receiver<ScreenCaptureStateMessage>,
+    Receiver<MonitoringStateMessage>,
 ) {
     let (terminate_tx, terminate_rx) = mpsc::channel();
     let (status_tx, status_rx) = mpsc::channel();
     let handle = thread::spawn(move || {
-        run_screencapture(&exam_data_dir, status_tx, terminate_rx, &output_path)
+        run_monitoring(&exam_data_dir, status_tx, terminate_rx, &output_path)
     });
     (handle, terminate_tx, status_rx)
 }

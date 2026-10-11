@@ -6,17 +6,17 @@ use std::thread::JoinHandle;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::screencapture::ScreenCaptureStateMessage;
+use crate::monitoring::MonitoringStateMessage;
 use crate::utils::*;
 
 pub struct Client {
     pub addr: String,
     pub id: u64,
     pub temp_dir_name: String,
-    pub screen_capture_thread: Option<(
+    pub monitoring_thread: Option<(
         JoinHandle<io::Result<()>>,
         Sender<PathBuf>,
-        Receiver<ScreenCaptureStateMessage>,
+        Receiver<MonitoringStateMessage>,
     )>,
 }
 impl Client {
@@ -26,7 +26,7 @@ impl Client {
             addr,
             id,
             temp_dir_name: Self::get_temp_dir_name_from_client_id(id),
-            screen_capture_thread: None,
+            monitoring_thread: None,
         }
     }
 

@@ -4,15 +4,15 @@ use rfd::FileDialog;
 use slint::ToSharedString;
 use tokio::time::sleep;
 
-use crate::{backend::*, screencapture::*, utils::*};
+use crate::{backend::*, monitoring::*, utils::*};
 
 #[path = "../utils.rs"]
 mod utils;
 
 #[path = "../client/backend.rs"]
 mod backend;
-#[path = "../client/screencapture.rs"]
-mod screencapture;
+#[path = "../client/monitoring.rs"]
+mod monitoring;
 
 slint::include_modules!();
 fn main() -> std::io::Result<()> {
@@ -119,9 +119,8 @@ fn main() -> std::io::Result<()> {
                 let mut c = c.lock().unwrap();
                 let state = c.register(&name).await.is_ok_and(|f| f);
                 if state {
-                    let thread =
-                        start_screencapture_thread("exam_data/".into(), "output.bin".into());
-                    c.screen_capture_thread = Some(thread);
+                    let thread = start_monitoring_thread("exam_data/".into(), "output.bin".into());
+                    c.monitoring_thread = Some(thread);
                 }
                 state
             };
@@ -161,7 +160,7 @@ fn main() -> std::io::Result<()> {
         let future = async move {
             let state = {
                 let mut c = c.lock().unwrap();
-                if let Some((join_handle, tx, rx)) = &c.screen_capture_thread {
+                if let Some((join_handle, tx, rx)) = &c.monitoring_thread {
                     'handle_thread_stop: {
                         // check if thread has already died from an error
                         if join_handle.is_finished() {
@@ -171,7 +170,7 @@ fn main() -> std::io::Result<()> {
                         // send over tx to tell thread to terminate,
                         // and check for error
                         if let Err(e) = tx.send(folder.clone()) {
-                            println!("error sending termination to screen_capture_thread: {e}");
+                            println!("error sending termination to monitoring thread: {e}");
                             if let Some(handle) = handle.upgrade() {
                                 handle.set_submit_exam_status(
                                     format!("Error ending exam: {e}").to_shared_string(),
@@ -188,10 +187,8 @@ fn main() -> std::io::Result<()> {
                             // meanwhile, also check for status update messages
                             if let Ok(message) = rx.try_recv() {
                                 let message = match message {
-                                    ScreenCaptureStateMessage::Stopped => {
-                                        Some("Saving submission...")
-                                    }
-                                    ScreenCaptureStateMessage::FinishedSavingSubmission => {
+                                    MonitoringStateMessage::Stopped => Some("Saving submission..."),
+                                    MonitoringStateMessage::FinishedSavingSubmission => {
                                         Some("Compressing exam data...")
                                     }
                                 };
@@ -213,7 +210,7 @@ fn main() -> std::io::Result<()> {
                     // take ownership of thread
 
                     // unwrap is safe because we already checked that it is some through the if let
-                    let thread = c.screen_capture_thread.take().unwrap().0;
+                    let thread = c.monitoring_thread.take().unwrap().0;
                     // unwrap is safe since we only break if join handle is finished
                     let result = thread.join().unwrap();
 
