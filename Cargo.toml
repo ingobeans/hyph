@@ -25,7 +25,9 @@ image = "0.25.10"
 imageproc = "0.27.0"
 ab_glyph = "0.2.32"
 chrono = "0.4.45"
-zip = "9.0.1"
+zip = { version = "9.0.1", features = [
+    "deflate-flate2",
+], default-features = false }
 rfd = "0.17.2"
 clonetree = "0.0.2"
 walkdir = "2.5.0"

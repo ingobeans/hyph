@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender, TryRecvError},
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use ab_glyph::FontRef;
@@ -201,12 +201,13 @@ fn run_monitoring(
         .send(MonitoringStateMessage::FinishedSavingSubmission)
         .map_err(std::io::Error::other)?;
 
-    zip_dir(
-        exam_data_dir,
-        output_path,
-        zip::CompressionMethod::default(),
-    )
-    .or(Err(std::io::Error::other("Couldn't zip dir.")))?;
+    let now = Instant::now();
+    zip_dir(exam_data_dir, output_path).or(Err(std::io::Error::other("Couldn't zip dir.")))?;
+    let after = Instant::now();
+    println!(
+        "zipping took: {}",
+        after.duration_since(now).as_millis() as f32 / 1000.0
+    );
 
     println!("finished creating exam data ZIP.");
     Ok(())
@@ -258,12 +259,7 @@ pub fn retry_failed_submission(
             Err(RetrySubmissionError::CriticalFail)?;
         }
 
-        zip_dir(
-            &exam_data_dir,
-            &output_path,
-            zip::CompressionMethod::default(),
-        )
-        .or(Err(RetrySubmissionError::ZipFail))?;
+        zip_dir(&exam_data_dir, &output_path).or(Err(RetrySubmissionError::ZipFail))?;
 
         Ok(())
     })
@@ -315,11 +311,7 @@ async fn async_copy_dir_slow(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> st
 }
 
 // joinked directly from the zip crate examples: https://github.com/zip-rs/zip2/blob/master/examples/write_dir.rs#L78
-pub fn zip_dir(
-    src_dir: &Path,
-    dest_file: &Path,
-    method: zip::CompressionMethod,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn zip_dir(src_dir: &Path, dest_file: &Path) -> Result<(), Box<dyn std::error::Error>> {
     if !Path::new(src_dir).is_dir() {
         return Err(ZipError::FileNotFound.into());
     }
@@ -329,9 +321,13 @@ pub fn zip_dir(
     let walkdir = WalkDir::new(src_dir);
 
     let mut zip = zip::ZipWriter::new(file);
-    let options = SimpleFileOptions::default()
-        .compression_method(method)
-        .unix_permissions(0o755);
+
+    // use lower level on compression for jpgs since theyre already compressed,
+    // while other files (like text & code) give better results with compression
+    let jpg_options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .compression_level(Some(1));
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
     for entry_result in walkdir.into_iter() {
         let entry = match entry_result {
@@ -348,6 +344,11 @@ pub fn zip_dir(
             .ok_or_else(|| format!("{:?} is a Non UTF-8 Path", path_stripped.display()))?;
 
         if path.is_file() {
+            let options = if path_as_string.ends_with(".jpg") {
+                jpg_options
+            } else {
+                options
+            };
             zip.start_file(path_as_string, options)?;
             let mut f = std::fs::File::open(path)?;
 
