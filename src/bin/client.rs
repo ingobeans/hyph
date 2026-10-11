@@ -218,8 +218,28 @@ async fn submit_exam(c: Rc<Mutex<Client>>, folder: PathBuf, handle: Rc<slint::We
                 false
             }
             MonitoringState::Ended => {
-                // todo: salveage
-                false
+                let join_handle =
+                    retry_failed_submission("exam_data/".into(), "output.bin".into(), folder);
+                if let Some(handle) = handle.upgrade() {
+                    handle.set_submit_exam_status("Retrying exam submission".to_shared_string());
+                }
+                loop {
+                    sleep(Duration::from_millis(500)).await;
+                    if join_handle.is_finished() {
+                        break;
+                    }
+                }
+                match join_handle.join().unwrap() {
+                    Ok(_) => c.send_file_to_server("output.bin").await.is_ok(),
+                    Err(err) => {
+                        if let Some(handle) = handle.upgrade() {
+                            handle.set_submit_exam_status(
+                                format!("Failed resubmitting exam: {err:?}").to_shared_string(),
+                            );
+                        }
+                        false
+                    }
+                }
             }
             MonitoringState::Active(monitoring_thread) => {
                 'handle_thread_stop: {

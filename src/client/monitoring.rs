@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, hash_map::Entry},
+    io::Read,
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender, TryRecvError},
     thread::{self, JoinHandle},
@@ -233,6 +234,62 @@ pub fn start_monitoring_thread(
         MonitoringThread::new(handle, terminate_tx, status_rx),
         logging_rx,
     )
+}
+
+#[derive(Debug)]
+pub enum RetrySubmissionError {
+    /// There's nothing that can be done. Exam is fully corrupted
+    CriticalFail,
+    IoError(std::io::Error),
+    ZipFail,
+}
+
+pub fn retry_failed_submission(
+    exam_data_dir: PathBuf,
+    output_path: PathBuf,
+    submission_dir: PathBuf,
+) -> JoinHandle<Result<(), RetrySubmissionError>> {
+    thread::spawn(move || {
+        if !exam_data_dir.exists() {
+            Err(RetrySubmissionError::CriticalFail)?;
+        }
+
+        let new_submission_dir = exam_data_dir.join("submission");
+        if new_submission_dir.exists() {
+            std::fs::remove_dir_all(&new_submission_dir).map_err(RetrySubmissionError::IoError)?;
+        }
+
+        // don't use clonetree in case it was the issue,
+        // instead retry with a more simple/robust method of cloning a tree
+        copy_dir_slow(submission_dir, new_submission_dir).map_err(RetrySubmissionError::IoError)?;
+
+        zip_dir(
+            &exam_data_dir,
+            &output_path,
+            zip::CompressionMethod::default(),
+        )
+        .or(Err(RetrySubmissionError::ZipFail))?;
+
+        Ok(())
+    })
+}
+
+/// Copies a directory recursively.
+/// Only used if clonetree failed
+///
+/// (clonetree is much faster since it does filesystem tomfoolery to copy the directory, while this actually copies every file making it more robust)
+fn copy_dir_slow(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
+    std::fs::create_dir_all(&dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_slow(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        } else {
+            std::fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        }
+    }
+    Ok(())
 }
 
 // joinked directly from the zip crate examples: https://github.com/zip-rs/zip2/blob/master/examples/write_dir.rs#L78
