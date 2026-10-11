@@ -1,23 +1,16 @@
 use std::io::{self, Read};
-use std::path::PathBuf;
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread::JoinHandle;
-
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::monitoring::MonitoringStateMessage;
+use crate::monitoring::MonitoringThread;
 use crate::utils::*;
 
 pub struct Client {
     pub addr: String,
     pub id: u64,
+    #[expect(dead_code)]
     pub temp_dir_name: String,
-    pub monitoring_thread: Option<(
-        JoinHandle<io::Result<()>>,
-        Sender<PathBuf>,
-        Receiver<MonitoringStateMessage>,
-    )>,
+    pub monitoring_thread: Option<MonitoringThread>,
 }
 impl Client {
     pub fn new(addr: String) -> Self {

@@ -18,6 +18,7 @@ mod utils;
 
 #[derive(Debug)]
 struct ServersideClient {
+    #[expect(dead_code)]
     name: String,
 }
 

@@ -1,3 +1,5 @@
+#![allow(clippy::await_holding_lock)]
+
 use std::{
     rc::Rc,
     sync::{Mutex, mpsc::TryRecvError},
@@ -192,16 +194,16 @@ fn main() -> std::io::Result<()> {
         let future = async move {
             let state = {
                 let mut c = c.lock().unwrap();
-                if let Some((join_handle, tx, rx)) = &c.monitoring_thread {
+                if let Some(monitoring_thread) = &c.monitoring_thread {
                     'handle_thread_stop: {
                         // check if thread has already died from an error
-                        if join_handle.is_finished() {
+                        if monitoring_thread.join_handle.is_finished() {
                             break 'handle_thread_stop;
                         }
 
                         // send over tx to tell thread to terminate,
                         // and check for error
-                        if let Err(e) = tx.send(folder.clone()) {
+                        if let Err(e) = monitoring_thread.terminate_tx.send(folder.clone()) {
                             println!("error sending termination to monitoring thread: {e}");
                             if let Some(handle) = handle.upgrade() {
                                 handle.set_submit_exam_status(
@@ -217,7 +219,7 @@ fn main() -> std::io::Result<()> {
                             sleep(Duration::from_millis(500)).await;
 
                             // meanwhile, also check for status update messages
-                            if let Ok(message) = rx.try_recv() {
+                            if let Ok(message) = monitoring_thread.status_rx.try_recv() {
                                 let message = match message {
                                     MonitoringStateMessage::Stopped => Some("Saving submission..."),
                                     MonitoringStateMessage::FinishedSavingSubmission => {
@@ -231,7 +233,7 @@ fn main() -> std::io::Result<()> {
                                 }
                             }
 
-                            if join_handle.is_finished() {
+                            if monitoring_thread.join_handle.is_finished() {
                                 break 'handle_thread_stop;
                             }
                         }
@@ -242,7 +244,7 @@ fn main() -> std::io::Result<()> {
                     // take ownership of thread
 
                     // unwrap is safe because we already checked that it is some through the if let
-                    let thread = c.monitoring_thread.take().unwrap().0;
+                    let thread = c.monitoring_thread.take().unwrap().join_handle;
                     // unwrap is safe since we only break if join handle is finished
                     let result = thread.join().unwrap();
 
