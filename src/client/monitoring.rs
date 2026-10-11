@@ -13,13 +13,20 @@ use win_screenshot::prelude::*;
 
 use crate::utils::zip_dir;
 
-fn take_screenshot(save_path: &PathBuf) -> Result<(), std::io::Error> {
-    let buf = capture_display().or(Err(std::io::Error::other("Couldn't take screen capture")))?;
+#[derive(Debug)]
+pub enum TakeScreenshotError {
+    CaptureDisplayFail,
+    ImageParsingFail,
+    FontLoadingFail,
+    ImageError(image::ImageError),
+}
+
+fn take_screenshot(save_path: &PathBuf) -> Result<(), TakeScreenshotError> {
+    let buf = capture_display().or(Err(TakeScreenshotError::CaptureDisplayFail))?;
 
     let mut img = DynamicImage::ImageRgba8(
-        RgbaImage::from_raw(buf.width, buf.height, buf.pixels).ok_or(std::io::Error::other(
-            "Couldn't convert screen capture to img",
-        ))?,
+        RgbaImage::from_raw(buf.width, buf.height, buf.pixels)
+            .ok_or(TakeScreenshotError::ImageParsingFail)?,
     );
 
     let date = Local::now();
@@ -27,7 +34,7 @@ fn take_screenshot(save_path: &PathBuf) -> Result<(), std::io::Error> {
     let time_text = format!("{}", date.format("%H:%M:%S"));
 
     let font = FontRef::try_from_slice(include_bytes!("../../ui/assets/DejaVuSans.ttf"))
-        .map_err(|e| std::io::Error::other(e))?;
+        .or(Err(TakeScreenshotError::FontLoadingFail))?;
 
     let x = img.width().saturating_sub(200);
     imageproc::drawing::draw_text_mut(
@@ -51,12 +58,15 @@ fn take_screenshot(save_path: &PathBuf) -> Result<(), std::io::Error> {
 
     img.to_rgb8()
         .save(save_path.join(format!("{unix_time}.jpg")))
-        .map_err(std::io::Error::other)?;
+        .map_err(TakeScreenshotError::ImageError)?;
     Ok(())
 }
 
+#[derive(Debug)]
+pub enum MonitoringLoggingMessage {
+    ScreenshotError(TakeScreenshotError),
+}
 pub enum MonitoringStateMessage {
-    // FrameTaken,
     Stopped,
     FinishedSavingSubmission,
     // FinishedCompilingVideoData,
@@ -65,6 +75,7 @@ pub enum MonitoringStateMessage {
 fn run_monitoring(
     exam_data_dir: &PathBuf,
     status_tx: Sender<MonitoringStateMessage>,
+    logging_tx: Sender<MonitoringLoggingMessage>,
     terminate_rx: Receiver<PathBuf>,
     output_path: &PathBuf,
 ) -> std::io::Result<()> {
@@ -84,7 +95,16 @@ fn run_monitoring(
             }
             Err(TryRecvError::Empty) => {}
         }
-        take_screenshot(&captures_save_dir)?;
+
+        let result = take_screenshot(&captures_save_dir);
+
+        // if error sending screenshot, dont crash thread,
+        // rather send it over logging channel
+        if let Err(err) = result {
+            logging_tx
+                .send(MonitoringLoggingMessage::ScreenshotError(err))
+                .map_err(std::io::Error::other)?;
+        }
 
         // arbitrary delay
         thread::sleep(Duration::from_secs(2));
@@ -126,14 +146,25 @@ pub fn start_monitoring_thread(
     exam_data_dir: PathBuf,
     output_path: PathBuf,
 ) -> (
-    JoinHandle<std::io::Result<()>>,
-    Sender<PathBuf>,
-    Receiver<MonitoringStateMessage>,
+    (
+        JoinHandle<std::io::Result<()>>,
+        Sender<PathBuf>,
+        Receiver<MonitoringStateMessage>,
+    ),
+    Receiver<MonitoringLoggingMessage>,
 ) {
     let (terminate_tx, terminate_rx) = mpsc::channel();
     let (status_tx, status_rx) = mpsc::channel();
+    let (logging_tx, logging_rx) = mpsc::channel();
+
     let handle = thread::spawn(move || {
-        run_monitoring(&exam_data_dir, status_tx, terminate_rx, &output_path)
+        run_monitoring(
+            &exam_data_dir,
+            status_tx,
+            logging_tx,
+            terminate_rx,
+            &output_path,
+        )
     });
-    (handle, terminate_tx, status_rx)
+    ((handle, terminate_tx, status_rx), logging_rx)
 }

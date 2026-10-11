@@ -1,5 +1,10 @@
-use std::{rc::Rc, sync::Mutex, time::Duration};
+use std::{
+    rc::Rc,
+    sync::{Mutex, mpsc::TryRecvError},
+    time::Duration,
+};
 
+use chrono::Local;
 use rfd::FileDialog;
 use slint::ToSharedString;
 use tokio::time::sleep;
@@ -119,21 +124,48 @@ fn main() -> std::io::Result<()> {
                 let mut c = c.lock().unwrap();
                 let state = c.register(&name).await.is_ok_and(|f| f);
                 if state {
-                    let thread = start_monitoring_thread("exam_data/".into(), "output.bin".into());
+                    let (thread, logging_rx) =
+                        start_monitoring_thread("exam_data/".into(), "output.bin".into());
                     c.monitoring_thread = Some(thread);
+                    Some(logging_rx)
+                } else {
+                    None
                 }
-                state
             };
 
             if let Some(handle) = handle.upgrade() {
-                handle.set_start_exam_success(state);
-                handle.set_start_exam_fail(!state);
-                if state {
+                handle.set_start_exam_success(state.is_some());
+                handle.set_start_exam_fail(state.is_none());
+                if state.is_some() {
                     handle.set_exam_active(true);
                     println!("Started exam.");
                 } else {
                     handle.set_ping_enabled(true);
                     handle.set_start_exam_enabled(true);
+                }
+            }
+
+            // listen for (error) messages over logging_rx.
+
+            if let Some(logging_rx) = state {
+                loop {
+                    match logging_rx.try_recv() {
+                        Ok(MonitoringLoggingMessage::ScreenshotError(err)) => {
+                            if let Some(handle) = handle.upgrade() {
+                                let date = Local::now();
+                                let time_text = format!("{}", date.format("%H:%M:%S"));
+                                handle.set_monitoring_logging(
+                                    format!("Error encountered while monitoring exam: {err:?} ({time_text})")
+                                        .to_shared_string(),
+                                );
+                            }
+                        }
+                        Err(TryRecvError::Disconnected) => {
+                            break;
+                        }
+                        Err(TryRecvError::Empty) => {}
+                    }
+                    sleep(Duration::from_millis(100)).await;
                 }
             }
         };

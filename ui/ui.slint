@@ -144,6 +144,7 @@ export component App inherits Window {
     in property <bool> exam-stopped: false;
 
     in property <string> submit-exam-status: "";
+    in property <string> monitoring-logging: "";
 
     out property <string> ip_address;
     callback ping_click();
@@ -321,6 +322,26 @@ export component App inherits Window {
                 visible: root.submit-exam-fail;
                 source: @image-url("assets/fail.png");
             }
+        }
+    }
+
+    HorizontalLayout {
+        y: 340px;
+        alignment: center;
+        spacing: 5px;
+
+        Image {
+            visible: root.monitoring-logging != "";
+            height: 30px;
+            width: 30px;
+            y: -8px;
+            source: @image-url("assets/warn.png");
+        }
+
+        Text {
+            y: 0;
+            color: #FF9D00;
+            text: root.monitoring-logging;
         }
     }
 }
