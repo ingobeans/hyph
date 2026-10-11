@@ -1,8 +1,11 @@
 use std::{
     path::PathBuf,
-    sync::mpsc::{self, Receiver, Sender, TryRecvError},
+    sync::{
+        LazyLock,
+        mpsc::{self, Receiver, Sender, TryRecvError},
+    },
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use ab_glyph::FontRef;
@@ -21,7 +24,7 @@ pub enum TakeScreenshotError {
     ImageError(image::ImageError),
 }
 
-fn take_screenshot(save_path: &PathBuf) -> Result<(), TakeScreenshotError> {
+fn take_screenshot(save_path: &PathBuf, font: &FontRef) -> Result<(), TakeScreenshotError> {
     let buf = capture_display().or(Err(TakeScreenshotError::CaptureDisplayFail))?;
 
     let mut img = DynamicImage::ImageRgba8(
@@ -33,9 +36,6 @@ fn take_screenshot(save_path: &PathBuf) -> Result<(), TakeScreenshotError> {
     let unix_time = date.timestamp();
     let time_text = format!("{}", date.format("%H:%M:%S"));
 
-    let font = FontRef::try_from_slice(include_bytes!("../../ui/assets/DejaVuSans.ttf"))
-        .or(Err(TakeScreenshotError::FontLoadingFail))?;
-
     let x = img.width().saturating_sub(200);
     imageproc::drawing::draw_text_mut(
         &mut img,
@@ -43,7 +43,7 @@ fn take_screenshot(save_path: &PathBuf) -> Result<(), TakeScreenshotError> {
         x as i32,
         5,
         51.0,
-        &font,
+        font,
         &time_text,
     );
     imageproc::drawing::draw_text_mut(
@@ -52,7 +52,7 @@ fn take_screenshot(save_path: &PathBuf) -> Result<(), TakeScreenshotError> {
         x as i32,
         50,
         24.0,
-        &font,
+        font,
         &time_text,
     );
 
@@ -82,6 +82,13 @@ fn run_monitoring(
     let captures_save_dir = exam_data_dir.join("captures");
     std::fs::create_dir_all(&captures_save_dir)?;
 
+    let Ok(font) = FontRef::try_from_slice(include_bytes!("../../ui/assets/DejaVuSans.ttf")) else {
+        let _ = logging_tx.send(MonitoringLoggingMessage::ScreenshotError(
+            TakeScreenshotError::FontLoadingFail,
+        ));
+        return Err(std::io::Error::other("Font loading fail"));
+    };
+
     let submission_dir = loop {
         // stop monitoring when message is received over rx.
         // the message also contains a user submitted pathbuf to their
@@ -96,7 +103,7 @@ fn run_monitoring(
             Err(TryRecvError::Empty) => {}
         }
 
-        let result = take_screenshot(&captures_save_dir);
+        let result = take_screenshot(&captures_save_dir, &font);
 
         // if error sending screenshot, dont crash thread,
         // rather send it over logging channel
