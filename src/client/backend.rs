@@ -5,12 +5,23 @@ use tokio::net::TcpStream;
 use crate::monitoring::MonitoringThread;
 use crate::utils::*;
 
+pub enum MonitoringState {
+    ExamNotStarted,
+    Active(MonitoringThread),
+    Ended,
+}
+impl MonitoringState {
+    pub fn take(&mut self) -> MonitoringState {
+        std::mem::replace(self, MonitoringState::Ended)
+    }
+}
+
 pub struct Client {
     pub addr: String,
     pub id: u64,
     #[expect(dead_code)]
     pub temp_dir_name: String,
-    pub monitoring_thread: Option<MonitoringThread>,
+    pub monitoring_thread: MonitoringState,
 }
 impl Client {
     pub fn new(addr: String) -> Self {
@@ -19,7 +30,7 @@ impl Client {
             addr,
             id,
             temp_dir_name: Self::get_temp_dir_name_from_client_id(id),
-            monitoring_thread: None,
+            monitoring_thread: MonitoringState::ExamNotStarted,
         }
     }
 

@@ -1,6 +1,7 @@
 #![allow(clippy::await_holding_lock)]
 
 use std::{
+    path::PathBuf,
     rc::Rc,
     sync::{Mutex, mpsc::TryRecvError},
     time::Duration,
@@ -128,7 +129,7 @@ fn main() -> std::io::Result<()> {
                 if state {
                     let (thread, logging_rx) =
                         start_monitoring_thread("exam_data/".into(), "output.bin".into());
-                    c.monitoring_thread = Some(thread);
+                    c.monitoring_thread = MonitoringState::Active(thread);
                     Some(logging_rx)
                 } else {
                     None
@@ -200,103 +201,108 @@ fn main() -> std::io::Result<()> {
             handle.set_submit_exam_status("Stopping exam...".to_shared_string());
         }
 
-        let future = async move {
-            let state = {
-                let mut c = c.lock().unwrap();
-                if let Some(monitoring_thread) = &c.monitoring_thread {
-                    'handle_thread_stop: {
-                        // check if thread has already died from an error
-                        if monitoring_thread.join_handle.is_finished() {
-                            break 'handle_thread_stop;
-                        }
-
-                        // send over tx to tell thread to terminate,
-                        // and check for error
-                        if let Err(e) = monitoring_thread.terminate_tx.send(folder.clone()) {
-                            println!("error sending termination to monitoring thread: {e}");
-                            if let Some(handle) = handle.upgrade() {
-                                handle.set_submit_exam_status(
-                                    format!("Error ending exam: {e}").to_shared_string(),
-                                );
-                            }
-                            break 'handle_thread_stop;
-                        }
-
-                        // wait for thread to completely finish
-                        loop {
-                            print!(".");
-                            sleep(Duration::from_millis(500)).await;
-
-                            // meanwhile, also check for status update messages
-                            if let Ok(message) = monitoring_thread.status_rx.try_recv() {
-                                let message = match message {
-                                    MonitoringStateMessage::Stopped => Some("Saving submission..."),
-                                    MonitoringStateMessage::FinishedSavingSubmission => {
-                                        Some("Compressing exam data...")
-                                    }
-                                };
-                                if let Some(message) = message
-                                    && let Some(handle) = handle.upgrade()
-                                {
-                                    handle.set_submit_exam_status(message.to_shared_string())
-                                }
-                            }
-
-                            if monitoring_thread.join_handle.is_finished() {
-                                break 'handle_thread_stop;
-                            }
-                        }
-                    }
-
-                    // check that the thread exited sucessfully
-
-                    // take ownership of thread
-
-                    // unwrap is safe because we already checked that it is some through the if let
-                    let thread = c.monitoring_thread.take().unwrap().join_handle;
-                    // unwrap is safe since we only break if join handle is finished
-                    let result = thread.join().unwrap();
-
-                    if let Some(handle) = handle.upgrade() {
-                        if let Err(err) = result {
-                            handle.set_submit_exam_success(false);
-                            handle.set_submit_exam_fail(true);
-                            handle.set_exam_stopped(false);
-                            handle.set_submit_exam_status(
-                                format!("Error saving exam data: {err:?}").to_shared_string(),
-                            );
-                            return;
-                        }
-
-                        handle.set_submit_exam_status(
-                            "Transmitting exam data to server...".to_shared_string(),
-                        );
-                    }
-                    c.send_file_to_server("output.bin").await.is_ok()
-                } else {
-                    false
-                }
-            };
-
-            if let Some(handle) = handle.upgrade() {
-                handle.set_submit_exam_success(state);
-                handle.set_submit_exam_fail(!state);
-                if state {
-                    handle.set_submit_exam_status(
-                        "Exam submitted sucessfully! You can now close this window."
-                            .to_shared_string(),
-                    );
-                    handle.set_exam_active(false);
-                    println!("Sucessfully submitted exam.");
-                } else {
-                    handle.set_submit_exam_status("Failed to upload exam.".to_shared_string());
-                    handle.set_exam_stopped(false);
-                }
-            }
-        };
+        let future = submit_exam(c, folder.clone(), handle);
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
     });
 
     app.run().unwrap();
     Ok(())
+}
+
+async fn submit_exam(c: Rc<Mutex<Client>>, folder: PathBuf, handle: Rc<slint::Weak<App>>) {
+    let state = {
+        let mut c = c.lock().unwrap();
+        match c.monitoring_thread.take() {
+            MonitoringState::ExamNotStarted => {
+                // todo: report error
+                false
+            }
+            MonitoringState::Ended => {
+                // todo: salveage
+                false
+            }
+            MonitoringState::Active(monitoring_thread) => {
+                'handle_thread_stop: {
+                    // check if thread has already died from an error
+                    if monitoring_thread.join_handle.is_finished() {
+                        break 'handle_thread_stop;
+                    }
+
+                    // send over tx to tell thread to terminate,
+                    // and check for error
+                    if let Err(e) = monitoring_thread.terminate_tx.send(folder) {
+                        println!("error sending termination to monitoring thread: {e}");
+                        if let Some(handle) = handle.upgrade() {
+                            handle.set_submit_exam_status(
+                                format!("Error ending exam: {e}").to_shared_string(),
+                            );
+                        }
+                        break 'handle_thread_stop;
+                    }
+
+                    // wait for thread to completely finish
+                    loop {
+                        print!(".");
+                        sleep(Duration::from_millis(500)).await;
+
+                        // meanwhile, also check for status update messages
+                        if let Ok(message) = monitoring_thread.status_rx.try_recv() {
+                            let message = match message {
+                                MonitoringStateMessage::Stopped => Some("Saving submission..."),
+                                MonitoringStateMessage::FinishedSavingSubmission => {
+                                    Some("Compressing exam data...")
+                                }
+                            };
+                            if let Some(message) = message
+                                && let Some(handle) = handle.upgrade()
+                            {
+                                handle.set_submit_exam_status(message.to_shared_string())
+                            }
+                        }
+
+                        if monitoring_thread.join_handle.is_finished() {
+                            break 'handle_thread_stop;
+                        }
+                    }
+                }
+
+                // check that the thread exited sucessfully
+
+                // unwrap is safe since we only break if join handle is finished
+                let result = monitoring_thread.join_handle.join().unwrap();
+
+                if let Some(handle) = handle.upgrade() {
+                    if let Err(err) = result {
+                        handle.set_submit_exam_success(false);
+                        handle.set_submit_exam_fail(true);
+                        handle.set_exam_stopped(false);
+                        handle.set_submit_exam_status(
+                            format!("Error saving exam data: {err:?}").to_shared_string(),
+                        );
+                        return;
+                    }
+
+                    handle.set_submit_exam_status(
+                        "Transmitting exam data to server...".to_shared_string(),
+                    );
+                }
+                c.send_file_to_server("output.bin").await.is_ok()
+            }
+        }
+    };
+
+    if let Some(handle) = handle.upgrade() {
+        handle.set_submit_exam_success(state);
+        handle.set_submit_exam_fail(!state);
+        if state {
+            handle.set_submit_exam_status(
+                "Exam submitted sucessfully! You can now close this window.".to_shared_string(),
+            );
+            handle.set_exam_active(false);
+            println!("Sucessfully submitted exam.");
+        } else {
+            handle.set_submit_exam_status("Failed to upload exam.".to_shared_string());
+            handle.set_exam_stopped(false);
+        }
+    }
 }
