@@ -1,4 +1,5 @@
 use std::{
+    collections::{HashMap, hash_map::Entry},
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender, TryRecvError},
     thread::{self, JoinHandle},
@@ -9,9 +10,17 @@ use ab_glyph::FontRef;
 use chrono::Local;
 use clonetree::clone_tree;
 use image::{DynamicImage, Rgba, RgbaImage};
+use list_windows::*;
 use walkdir::WalkDir;
 use win_screenshot::prelude::*;
 use zip::{result::ZipError, write::SimpleFileOptions};
+
+use crate::utils::{OpenedWindows, serialize_opened_windows};
+
+mod list_windows;
+
+/// Take a screenshot every n seconds
+pub const SCREENSHOT_INTERVAL: u8 = 2;
 
 pub struct MonitoringThread {
     pub join_handle: JoinHandle<std::io::Result<()>>,
@@ -82,6 +91,7 @@ fn take_screenshot(save_path: &Path, font: &FontRef) -> Result<(), TakeScreensho
 #[derive(Debug)]
 pub enum MonitoringLoggingMessage {
     ScreenshotError(TakeScreenshotError),
+    ListProgramsError,
 }
 pub enum MonitoringStateMessage {
     Stopped,
@@ -106,6 +116,9 @@ fn run_monitoring(
         return Err(std::io::Error::other("Font loading fail"));
     };
 
+    let mut opened_windows: OpenedWindows = HashMap::new();
+    let mut screenshot_counter: u8 = 0;
+
     let submission_dir = loop {
         // stop monitoring when message is received over rx.
         // the message also contains a user submitted pathbuf to their
@@ -120,24 +133,60 @@ fn run_monitoring(
             Err(TryRecvError::Empty) => {}
         }
 
-        let result = take_screenshot(&captures_save_dir, &font);
+        // track open programs
+        match get_open_windows() {
+            Some(windows) => {
+                for window in windows.into_iter() {
+                    let date = Local::now();
+                    let unix_time = date.timestamp();
+                    match opened_windows.entry(window) {
+                        Entry::Occupied(mut entry) => {
+                            entry.get_mut().push(unix_time);
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(vec![unix_time]);
+                        }
+                    }
+                }
+            }
+            None => {
+                logging_tx
+                    .send(MonitoringLoggingMessage::ListProgramsError)
+                    .map_err(std::io::Error::other)?;
+            }
+        }
 
-        // if error sending screenshot, dont crash thread,
-        // rather send it over logging channel
-        if let Err(err) = result {
-            logging_tx
-                .send(MonitoringLoggingMessage::ScreenshotError(err))
-                .map_err(std::io::Error::other)?;
+        // take screenshot if screenshot_counter reaches 0
+        screenshot_counter = screenshot_counter.saturating_sub(1);
+        if screenshot_counter == 0 {
+            screenshot_counter = SCREENSHOT_INTERVAL;
+            let result = take_screenshot(&captures_save_dir, &font);
+
+            // if error sending screenshot, dont crash thread,
+            // rather send it over logging channel
+            if let Err(err) = result {
+                logging_tx
+                    .send(MonitoringLoggingMessage::ScreenshotError(err))
+                    .map_err(std::io::Error::other)?;
+            }
         }
 
         // arbitrary delay
-        thread::sleep(Duration::from_secs(2));
+        thread::sleep(Duration::from_secs(1));
     };
 
     println!("stopped monitoring. attempting to zip exam data (screen capture + submission).");
+
     status_tx
         .send(MonitoringStateMessage::Stopped)
         .map_err(std::io::Error::other)?;
+
+    // write opened windows data to file
+    let serialized_window_data = serialize_opened_windows(opened_windows);
+    std::fs::write(
+        exam_data_dir.join("opened_windows.txt"),
+        serialized_window_data,
+    )?;
 
     // copy exam submission directory
     let new_submission_dir = exam_data_dir.join("submission");

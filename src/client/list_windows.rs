@@ -34,7 +34,7 @@ unsafe extern "system" fn try_get_name(hwnd: *mut HWND__, pointer: isize) -> i32
     1
 }
 
-fn get_open_windows() -> Option<Vec<String>> {
+pub fn get_open_windows() -> Option<Vec<String>> {
     let mut names: Vec<String> = Vec::new();
     unsafe {
         let lparam = (&mut names as *mut Vec<String>) as isize;
@@ -46,9 +46,4 @@ fn get_open_windows() -> Option<Vec<String>> {
         }
     }
     Some(names)
-}
-
-fn main() {
-    let names = get_open_windows();
-    println!("{names:?}");
 }

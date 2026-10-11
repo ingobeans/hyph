@@ -152,13 +152,22 @@ fn main() -> std::io::Result<()> {
             if let Some(logging_rx) = state {
                 loop {
                     match logging_rx.try_recv() {
-                        Ok(MonitoringLoggingMessage::ScreenshotError(err)) => {
+                        Ok(message) => {
+                            let message = match message {
+                                MonitoringLoggingMessage::ScreenshotError(err) => {
+                                    let date = Local::now();
+                                    let time_text = format!("{}", date.format("%H:%M:%S"));
+                                    format!("Error encountered while monitoring exam: {err:?} ({time_text})").to_shared_string()
+                                },
+                                MonitoringLoggingMessage::ListProgramsError => {
+                                    format!("Error encountered while monitoring exam").to_shared_string()
+                                
+                                },
+                            };
+                                
                             if let Some(handle) = handle.upgrade() {
-                                let date = Local::now();
-                                let time_text = format!("{}", date.format("%H:%M:%S"));
                                 handle.set_monitoring_logging(
-                                    format!("Error encountered while monitoring exam: {err:?} ({time_text})")
-                                        .to_shared_string(),
+                                    message
                                 );
                             }
                         }
