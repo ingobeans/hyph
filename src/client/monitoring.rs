@@ -306,10 +306,10 @@ pub async fn backup_failed_submission(
 ///
 /// (clonetree is much faster since it does filesystem tomfoolery to copy the directory, while this actually copies every file making it more robust)
 async fn async_copy_dir_slow(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
-    std::fs::create_dir_all(&dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
+    tokio::fs::create_dir_all(&dst).await?;
+    let mut iterator = tokio::fs::read_dir(src).await?;
+    while let Some(entry) = iterator.next_entry().await? {
+        let ty = entry.file_type().await?;
         if ty.is_dir() {
             Box::pin(async_copy_dir_slow(
                 entry.path(),
@@ -317,7 +317,7 @@ async fn async_copy_dir_slow(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> st
             ))
             .await?;
         } else {
-            std::fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+            tokio::fs::copy(entry.path(), dst.as_ref().join(entry.file_name())).await?;
         }
     }
     Ok(())
