@@ -1,6 +1,6 @@
 import { Button } from "std-widgets.slint";
 
-component OuterBorder {
+export component OuterBorder {
     in property <brush> border-color;
     in property <length> padding-width;
     Rectangle {
@@ -36,11 +36,11 @@ component OuterBorder {
     }
 }
 
-component Container {
+export component Container {
     @children
 }
 
-component LineInput {
+export component LineInput {
     width: 260px;
     height: 30px;
     in property <length> padding-width: 8px;
@@ -64,7 +64,7 @@ component LineInput {
     }
 }
 
-component ImageButton inherits TouchArea {
+export component ImageButton inherits TouchArea {
     in property <image> image: @image-url("assets/close.png");
     in property <brush> normal-color: white;
     in property <brush> hover-color: #b4b4b4;
@@ -120,38 +120,9 @@ component ImageButton inherits TouchArea {
     }
 }
 
-export component App inherits Window {
-    background: rgb(13, 17, 23);
-    no-frame: true;
-    title: "Hyph";
-    width: 990px;
-    height: 450px;
-
-    in property <string> username: "Logged in as: USER";
-    in property <bool> ping-enabled: true;
-    in property <bool> start-exam-enabled: true;
-
-    in property <bool> ping-success: false;
-    in property <bool> ping-fail: false;
-
-    in property <bool> start-exam-success: false;
-    in property <bool> start-exam-fail: false;
-
-    in property <bool> submit-exam-success: false;
-    in property <bool> submit-exam-fail: false;
-
-    in property <bool> exam-active: false;
-    in property <bool> exam-stopped: false;
-
-    in property <string> submit-exam-status: "";
-    in property <string> monitoring-logging: "";
-
-    out property <string> ip_address;
-    callback ping_click();
-    callback start_exam_click();
-    callback submit_exam_click();
-    callback close_program();
+export component Titlebar {
     callback mouse_move(length, length);
+    in property <string> titlebar-text;
 
     TouchArea {
         y: 0;
@@ -181,167 +152,15 @@ export component App inherits Window {
     }
 
     Text {
-        text: "Exam Controller";
+        text: root.titlebar-text;
         font-size: 28px;
         y: 3px;
     }
+}
 
-    ImageButton {
-        enabled: !root.exam-active;
-        width: 30px;
-        height: 30px;
-        x: (parent.width) - (self.width) - 5px;
-        y: 5px;
-
-        clicked => close_program();
-    }
-
-    HorizontalLayout {
-        y: 80px;
-        width: 640px;
-        alignment: start;
-        spacing: 10px;
-        Text {
-            font-size: 20px;
-            text: "Server IP:";
-        }
-
-        LineInput {
-            width: 420px;
-            padding-width: 8px;
-            y: -4px;
-            enabled: root.start-exam-enabled;
-            changed out-text => {
-                root.ip_address = self.out-text;
-            }
-        }
-
-        Button {
-            enabled: ping-enabled;
-            height: 40px;
-            y: -8px;
-            text: "Connect";
-            clicked => ping_click();
-        }
-
-        Container {
-            width: 30px;
-            Image {
-                height: 30px;
-                width: 30px;
-                y: -5px;
-                visible: root.ping-success;
-                source: @image-url("assets/check.png");
-            }
-
-            Image {
-                height: 30px;
-                width: 30px;
-                y: -5px;
-                visible: root.ping-fail;
-                source: @image-url("assets/fail.png");
-            }
-        }
-    }
-
-    Text {
-        text: username;
-        y: 125px;
-    }
-
-    HorizontalLayout {
-        y: 160px;
-        width: 240px;
-        alignment: start;
-        spacing: 10px;
-        Button {
-            enabled: root.ping-success && root.ping-enabled && root.start-exam-enabled;
-            width: 240px;
-            height: 40px;
-            y: -8px;
-            text: "Start Exam";
-            primary: true;
-            clicked => start_exam_click();
-        }
-
-        Container {
-            width: 30px;
-            Image {
-                height: 30px;
-                width: 30px;
-                y: -5px;
-                visible: root.start-exam-success;
-                source: @image-url("assets/check.png");
-            }
-
-            Image {
-                height: 30px;
-                width: 30px;
-                y: -5px;
-                visible: root.start-exam-fail;
-                source: @image-url("assets/fail.png");
-            }
-        }
-    }
-
-    Text {
-        text: root.submit-exam-status;
-        y: 245px;
-    }
-
-    HorizontalLayout {
-        y: 210px;
-        width: 240px;
-        alignment: start;
-        spacing: 10px;
-        Button {
-            visible: root.exam-active || root.exam-stopped;
-            enabled: !root.exam-stopped;
-            width: 240px;
-            height: 40px;
-            y: -8px;
-            text: "Submit Exam";
-            primary: true;
-            clicked => submit_exam_click();
-        }
-
-        Container {
-            width: 30px;
-            Image {
-                height: 30px;
-                width: 30px;
-                y: -5px;
-                visible: root.submit-exam-success;
-                source: @image-url("assets/check.png");
-            }
-
-            Image {
-                height: 30px;
-                width: 30px;
-                y: -5px;
-                visible: root.submit-exam-fail;
-                source: @image-url("assets/fail.png");
-            }
-        }
-    }
-
-    HorizontalLayout {
-        y: 340px;
-        alignment: center;
-        spacing: 5px;
-
-        Image {
-            visible: root.monitoring-logging != "";
-            height: 30px;
-            width: 30px;
-            y: -8px;
-            source: @image-url("assets/warn.png");
-        }
-
-        Text {
-            y: 0;
-            color: #FF9D00;
-            text: root.monitoring-logging;
-        }
-    }
+export component AppWindow inherits Window {
+    background: rgb(13, 17, 23);
+    no-frame: true;
+    width: 990px;
+    height: 450px;
 }
