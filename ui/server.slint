@@ -1,0 +1,24 @@
+import { Button } from "std-widgets.slint";
+import  {
+    OuterBorder,
+    ImageButton,
+    LineInput,
+    Container,
+    AppWindow,
+    Titlebar,
+} from "ui.slint";
+
+export component App inherits AppWindow {
+    title: "Hyph Server";
+    width: 1300px;
+    height: 650px;
+
+    callback mouse_move(length, length);
+
+    Titlebar {
+        width: parent.width;
+        height: parent.height;
+        titlebar-text: "Hyph Server";
+        mouse_move(a, b) => mouse_move(a,b);
+    }
+}

@@ -122,7 +122,9 @@ export component ImageButton inherits TouchArea {
 
 export component Titlebar {
     callback mouse_move(length, length);
+    callback close_program();
     in property <string> titlebar-text;
+    in property <bool> close-enabled: true;
 
     TouchArea {
         y: 0;
@@ -155,6 +157,16 @@ export component Titlebar {
         text: root.titlebar-text;
         font-size: 28px;
         y: 3px;
+    }
+
+    ImageButton {
+        enabled: root.close-enabled;
+        width: 30px;
+        height: 30px;
+        x: (parent.width) - (self.width) - 5px;
+        y: 5px;
+
+        clicked => close_program();
     }
 }
 

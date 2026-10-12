@@ -9,11 +9,7 @@ import  {
 } from "ui.slint";
 
 export component App inherits AppWindow {
-    background: rgb(13, 17, 23);
-    no-frame: true;
-    title: "Hyph";
-    width: 990px;
-    height: 450px;
+    title: "Exam Controller";
 
     in property <string> username: "Logged in as: USER";
     in property <bool> ping-enabled: true;
@@ -42,20 +38,12 @@ export component App inherits AppWindow {
     callback mouse_move(length, length);
 
     Titlebar {
+        close-enabled: !root.exam-active;
         width: parent.width;
         height: parent.height;
         titlebar-text: "Exam Controller";
         mouse_move(a, b) => mouse_move(a,b);
-    }
-
-    ImageButton {
-        enabled: !root.exam-active;
-        width: 30px;
-        height: 30px;
-        x: (parent.width) - (self.width) - 5px;
-        y: 5px;
-
-        clicked => close_program();
+        close_program => close_program();
     }
 
     HorizontalLayout {
