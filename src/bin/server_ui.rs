@@ -3,7 +3,18 @@ use std::{
     rc::Rc,
 };
 
-use slint::{ToSharedString, VecModel};
+use slint::{SharedString, ToSharedString, VecModel};
+
+impl Exam {
+    fn null() -> Self {
+        Exam {
+            date: SharedString::new(),
+            id: 0, // id 0 denotes null
+            name: SharedString::new(),
+            submissions: 0,
+        }
+    }
+}
 
 fn load_previous_exams(base: &Path) -> Vec<Exam> {
     let mut previous_exams = Vec::new();
@@ -135,6 +146,13 @@ fn main() {
             }
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
+    });
+
+    let handle = app_handle.clone();
+    app.on_back_exam(move || {
+        if let Some(handle) = handle.upgrade() {
+            handle.set_active_exam(Exam::null());
+        }
     });
 
     app.run().unwrap();

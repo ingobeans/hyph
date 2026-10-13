@@ -33,6 +33,7 @@ export component ServerApp inherits AppWindow {
     callback close_program();
     callback mouse_move(length, length);
     callback show_previous_exam(int);
+    callback back_exam();
 
     in property <[Exam]> previous_exams: [
         {
@@ -137,12 +138,20 @@ export component ServerApp inherits AppWindow {
         visible: active-exam.id != 0;
         width: parent.width;
         height: parent.height;
+        Button {
+            x: 17px;
+            y: 49px;
+            text: "Back";
+            clicked => root.back_exam();
+        }
+
         FlexboxLayout {
             width: parent.width - 40px;
             max-width: parent.width;
             spacing: 20px;
             spacing-vertical: 20px;
             y: 90px;
+
             for user in root.registered_users: Rectangle {
                 width: max(user-name.width,user-state.width,cheating-indicator.width) + 10px;
                 height: 90px;
