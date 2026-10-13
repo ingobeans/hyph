@@ -96,7 +96,9 @@ export component ServerApp inherits AppWindow {
             width: 150px;
             y: previous_exams.length > 0 ? (parent.height - self.height - 20px) : 120px;
             x: 20px;
-            clicked => root.new_exam();
+            clicked => {
+                name-input.show(root.width,root.height);
+            };
         }
 
         FlexboxLayout {
@@ -146,6 +148,49 @@ export component ServerApp inherits AppWindow {
                     height: parent.height;
                     border-color: rgb(61, 68, 77);
                 }
+            }
+        }
+
+        name-input := Container {
+            visible: false;
+            width: 400px;
+            height: 150px;
+
+            function show(parent_width: length, parent_height: length) {
+                self.x = (parent_width - self.width) / 2;
+                self.y = (parent_height - self.height) / 2;
+                self.visible = true;
+            }
+            function hide() {
+                self.visible = false;
+            }
+
+            Rectangle {
+                background: rgb(13, 17, 23);
+                drop-shadow-color: black;
+                drop-shadow-offset-x: 10px;
+                drop-shadow-offset-y: 10px;
+                drop-shadow-blur: 20px;
+            }
+
+            Titlebar {
+                width: parent.width;
+                height: parent.height;
+                titlebar-text: "Enter exam name";
+                small: true;
+                mouse_move(x, y) => {
+                    parent.x += x;
+                    parent.y += y;
+                }
+                close_program => {
+                    parent.visible = false;
+                }
+            }
+
+            Text {
+                text: "Enter a name for the exam";
+                x: 20px;
+                y: 40px;
             }
         }
     }

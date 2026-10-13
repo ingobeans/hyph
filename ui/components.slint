@@ -154,10 +154,11 @@ export component Titlebar {
     callback close_program();
     in property <string> titlebar-text;
     in property <bool> close-enabled: true;
+    in property <bool> small: false;
 
     TouchArea {
         y: 0;
-        height: 40px;
+        height: !small ? 40px : 30px;
         Rectangle {
             background: #010409;
             OuterBorder {
@@ -184,14 +185,15 @@ export component Titlebar {
 
     Text {
         text: root.titlebar-text;
-        font-size: 28px;
-        y: 3px;
+        font-size: !small ? 28px : 15px;
+        y: 5px;
+        x: !small ? ((parent.width - self.width) / 2) : 7px;
     }
 
     ImageButton {
         enabled: root.close-enabled;
-        width: 30px;
-        height: 30px;
+        width: !small ? 30px : 20px;
+        height: !small ? 30px : 20px;
         x: (parent.width) - (self.width) - 5px;
         y: 5px;
 
