@@ -231,6 +231,12 @@ export component PopupDialog {
         drop-shadow-blur: 20px;
     }
 
+    // just to stop clicks going through
+    TouchArea {
+        width: parent.width;
+        height: parent.height;
+    }
+
     Titlebar {
         width: parent.width;
         height: parent.height;
