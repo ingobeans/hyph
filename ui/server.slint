@@ -12,6 +12,11 @@ export struct RegisteredUser {
     name: string,
     state: int,
 }
+export struct PreviousExam {
+    name: string,
+    date: string,
+    submissions: int,
+}
 
 export component ServerApp inherits AppWindow {
     title: "Hyph Server";
@@ -20,7 +25,20 @@ export component ServerApp inherits AppWindow {
 
     callback close_program();
     callback mouse_move(length, length);
+    in property <[PreviousExam]> previous_exams: [
+        {
+            name: "Programming test",
+            date: "13/10 2026",
+            submissions: 16,
+        },
+        {
+            name: "Programming test2",
+            date: "26/09 2026",
+            submissions: 16,
+        }
+    ];
     in property <[RegisteredUser]> registered_users: [{ name:"person", state: 0 }];
+    in property <bool> exam-active;
 
     Titlebar {
         width: parent.width;
@@ -30,16 +48,76 @@ export component ServerApp inherits AppWindow {
         close_program => close_program();
     }
 
-    HorizontalLayout {
-        alignment: start;
-        width: 200px;
-        spacing: 20px;
-        y: 300px;
-        for user in root.registered_users: Rectangle {
-            background: grey;
-            height: 20px;
-            Text {
-                text: user.name;
+    // page before exam started
+    Container {
+        visible: !exam-active;
+        width: parent.width;
+        height: parent.height;
+        HorizontalLayout {
+            alignment: start;
+            width: 200px;
+            spacing: 20px;
+            y: 300px;
+            for exam in root.previous_exams: Rectangle {
+                width: date.width + submissions.width + 20px;
+                height: 90px;
+
+                title := Text {
+                    font-size: 14px;
+                    text: exam.name;
+                    x: 5px;
+                    y: 2px;
+                    font-italic: true;
+                    font-weight: 800;
+                }
+
+                date := Text {
+                    font-size: 14px;
+                    y: 20px;
+                    x: parent.width - self.width - 5px;
+                    text: exam.date;
+                }
+
+                submissions := Text {
+                    font-size: 14px;
+                    y: 20px;
+                    x: 5px;
+                    text: exam.submissions + " submissions";
+                }
+
+                Button {
+                    text: "View Submissions";
+                    x: 5px;
+                    width: parent.width - 10px;
+                    y: parent.height - self.height - 5px;
+                }
+
+                OuterBorder {
+                    padding-width: 2px;
+                    width: parent.width;
+                    height: parent.height;
+                    border-color: rgb(61, 68, 77);
+                }
+            }
+        }
+    }
+
+    // page when exam started
+    Container {
+        visible: exam-active;
+        width: parent.width;
+        height: parent.height;
+        HorizontalLayout {
+            alignment: start;
+            width: 200px;
+            spacing: 20px;
+            y: 300px;
+            for user in root.registered_users: Rectangle {
+                background: grey;
+                height: 20px;
+                Text {
+                    text: user.name;
+                }
             }
         }
     }
