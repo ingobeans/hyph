@@ -161,7 +161,6 @@ export component ServerApp inherits AppWindow {
         }
 
         name-input := PopupDialog {
-            visible: true;
             title: "Enter exam name";
             height: 155px;
             Text {
@@ -189,7 +188,7 @@ export component ServerApp inherits AppWindow {
 
                 Button {
                     text: "Cancel";
-                    clicked => root.hide();
+                    clicked => name-input.hide();
                 }
             }
         }
