@@ -36,6 +36,35 @@ export component OuterBorder {
     }
 }
 
+export component Button {
+    in property <bool> enabled: true;
+    in property <string> text: "Button";
+    in property <brush> color: #1B1F25;
+    callback clicked();
+
+    width: text-element.width + 30px;
+
+    area := TouchArea {
+        clicked => {
+            if root.enabled {
+                root.clicked();
+            }
+        };
+    }
+
+    Rectangle {
+        border-radius: 5px;
+        background: root.enabled ? (area.has-hover ? root.color.brighter(root.color.to-hsv().value > 0.5 ? -0.1 : 0.1) : root.color) : #34373c;
+        border-width: 0.5px;
+        border-color: grey;
+    }
+
+    text-element := Text {
+        text: root.text;
+        color: root.enabled ? (root.color.to-hsv().value > 0.5 ? black : white) : grey;
+    }
+}
+
 export component Container {
     @children
 }
