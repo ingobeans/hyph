@@ -7,6 +7,7 @@ import  {
     AppWindow,
     Titlebar,
     ColoredButton,
+    PopupDialog,
 } from "components.slint";
 
 export enum UserState {
@@ -151,45 +152,12 @@ export component ServerApp inherits AppWindow {
             }
         }
 
-        name-input := Container {
-            visible: false;
-            width: 400px;
-            height: 150px;
-
-            function show(parent_width: length, parent_height: length) {
-                self.x = (parent_width - self.width) / 2;
-                self.y = (parent_height - self.height) / 2;
-                self.visible = true;
-            }
-            function hide() {
-                self.visible = false;
-            }
-
-            Rectangle {
-                background: rgb(13, 17, 23);
-                drop-shadow-color: black;
-                drop-shadow-offset-x: 10px;
-                drop-shadow-offset-y: 10px;
-                drop-shadow-blur: 20px;
-            }
-
-            Titlebar {
-                width: parent.width;
-                height: parent.height;
-                titlebar-text: "Enter exam name";
-                small: true;
-                mouse_move(x, y) => {
-                    parent.x += x;
-                    parent.y += y;
-                }
-                close_program => {
-                    parent.visible = false;
-                }
-            }
-
+        name-input := PopupDialog {
+            visible: true;
+            title: "Enter exam name";
             Text {
                 text: "Enter a name for the exam";
-                x: 20px;
+                x: 15px;
                 y: 40px;
             }
         }

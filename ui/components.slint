@@ -201,6 +201,46 @@ export component Titlebar {
     }
 }
 
+export component PopupDialog {
+    visible: false;
+    width: 400px;
+    height: 150px;
+    in property <string> title;
+
+    public function show(parent_width: length, parent_height: length) {
+        self.x = (parent_width - self.width) / 2;
+        self.y = (parent_height - self.height) / 2;
+        self.visible = true;
+    }
+    public function hide() {
+        self.visible = false;
+    }
+
+    Rectangle {
+        background: rgb(13, 17, 23);
+        drop-shadow-color: black;
+        drop-shadow-offset-x: 10px;
+        drop-shadow-offset-y: 10px;
+        drop-shadow-blur: 20px;
+    }
+
+    Titlebar {
+        width: parent.width;
+        height: parent.height;
+        titlebar-text: root.title;
+        small: true;
+        mouse_move(x, y) => {
+            parent.x += x;
+            parent.y += y;
+        }
+        close_program => {
+            root.hide();
+        }
+    }
+
+    @children
+}
+
 export component AppWindow inherits Window {
     background: rgb(13, 17, 23);
     no-frame: true;
