@@ -16,6 +16,7 @@ export struct PreviousExam {
     name: string,
     date: string,
     submissions: int,
+    id: int,
 }
 
 export component ServerApp inherits AppWindow {
@@ -26,6 +27,8 @@ export component ServerApp inherits AppWindow {
 
     callback close_program();
     callback mouse_move(length, length);
+    callback show_previous_exam(int);
+
     in property <[PreviousExam]> previous_exams: [
         {
             name: "Programming test",
@@ -39,6 +42,7 @@ export component ServerApp inherits AppWindow {
         }
     ];
     in property <[RegisteredUser]> registered_users: [{ name:"person", state: 0 }];
+
     in property <bool> exam-active;
 
     Titlebar {
@@ -106,6 +110,7 @@ export component ServerApp inherits AppWindow {
                     x: 5px;
                     width: parent.width - 10px;
                     y: parent.height - self.height - 5px;
+                    clicked => root.show_previous_exam(exam.id);
                 }
 
                 OuterBorder {
