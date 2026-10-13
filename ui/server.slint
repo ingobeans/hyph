@@ -41,7 +41,7 @@ export component ServerApp inherits AppWindow {
     callback mouse_move(length, length);
     callback show_previous_exam(int);
     callback back_exam();
-    callback new_exam();
+    callback new_exam(string);
 
     in property <[Exam]> previous_exams: [
         {
@@ -98,7 +98,7 @@ export component ServerApp inherits AppWindow {
             y: previous_exams.length > 0 ? (parent.height - self.height - 20px) : 120px;
             x: 20px;
             clicked => {
-                name-input.show(root.width,root.height);
+                exam-name-popup.show(root.width,root.height);
             };
         }
 
@@ -153,7 +153,7 @@ export component ServerApp inherits AppWindow {
         }
 
         dark-overlay := Rectangle {
-            visible: name-input.visible;
+            visible: exam-name-popup.visible;
             width: root.width;
             height: root.height - 40px;
             y: 40px;
@@ -163,17 +163,17 @@ export component ServerApp inherits AppWindow {
                 width: parent.width;
                 height: parent.height;
                 clicked => {
-                    name-input.hide();
+                    exam-name-popup.hide();
                 }
             }
         }
 
-        name-input := PopupDialog {
+        exam-name-popup := PopupDialog {
             title: "Enter exam name";
             height: 155px;
 
             on_show => {
-                name-input-input.reset();
+                exam-name-input.reset();
             }
 
             Text {
@@ -182,7 +182,7 @@ export component ServerApp inherits AppWindow {
                 y: 40px;
             }
 
-            name-input-input := LineInput {
+            exam-name-input := LineInput {
                 x: 18px;
                 y: 70px;
                 width: parent.width - 36px;
@@ -197,11 +197,12 @@ export component ServerApp inherits AppWindow {
                 ColoredButton {
                     text: "Create";
                     color: #45e082;
+                    clicked => root.new_exam(exam-name-input.out-text);
                 }
 
                 Button {
                     text: "Cancel";
-                    clicked => name-input.hide();
+                    clicked => exam-name-popup.hide();
                 }
             }
         }

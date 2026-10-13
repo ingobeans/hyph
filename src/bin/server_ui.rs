@@ -3,6 +3,7 @@ use std::{
     rc::Rc,
 };
 
+use chrono::Local;
 use slint::{SharedString, ToSharedString, VecModel};
 
 impl Exam {
@@ -24,9 +25,10 @@ fn load_previous_exams(base: &Path) -> Vec<Exam> {
             continue;
         }
 
-        let Ok(id) = item.file_name().to_string_lossy().parse() else {
+        let Ok(id): Result<u32, _> = item.file_name().to_string_lossy().parse() else {
             continue;
         };
+        let id = id.cast_signed();
 
         let path = item.path();
         let info_path = path.join("info.txt");
@@ -62,7 +64,9 @@ fn load_previous_exams(base: &Path) -> Vec<Exam> {
 async fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> {
     let mut users = Vec::new();
 
-    let submissions_path = base.join(exam.id.to_string()).join("submissions");
+    let submissions_path = base
+        .join(exam.id.cast_unsigned().to_string())
+        .join("submissions");
 
     let mut iterator = tokio::fs::read_dir(submissions_path).await.unwrap();
 
@@ -133,10 +137,11 @@ fn main() {
 
     let handle = app_handle.clone();
     let previous_exams = previous_exams_rc.clone();
+    let exams_base_clone = exams_base.clone();
     app.on_show_previous_exam(move |id| {
         let previous_exams = previous_exams.clone();
         let handle = handle.clone();
-        let exams_base = exams_base.clone();
+        let exams_base = exams_base_clone.clone();
         let future = async move {
             if let Some(handle) = handle.upgrade() {
                 let Some(exam) = previous_exams.iter().find(|a| a.id == id) else {
@@ -145,6 +150,44 @@ fn main() {
                 let submissions = load_exam_submissions(exam, &exams_base).await;
                 handle.set_registered_users(VecModel::from_slice(&submissions));
                 handle.set_active_exam(exam.clone());
+            }
+        };
+        slint::spawn_local(async_compat::Compat::new(future)).unwrap();
+    });
+
+    let handle = app_handle.clone();
+    let exams_base_clone = exams_base.clone();
+    app.on_new_exam(move |name| {
+        let handle = handle.clone();
+        let exams_base = exams_base_clone.clone();
+        let future = async move {
+            if let Some(handle) = handle.upgrade() {
+                let date = Local::now();
+                let date_text: String = format!("{}", date.format("%d/%m %Y"));
+                let id: i32 = rand::random();
+
+                let exam_path = exams_base.join(id.cast_unsigned().to_string());
+                println!("^ {id}");
+
+                tokio::fs::create_dir_all(exam_path.join("submissions"))
+                    .await
+                    .unwrap();
+
+                let info = format!("{name}\n{date_text}");
+                tokio::fs::write(exam_path.join("info.txt"), info)
+                    .await
+                    .unwrap();
+
+                let exam = Exam {
+                    date: date_text.to_shared_string(),
+                    ended: false,
+                    id,
+                    name,
+                    submissions: 0,
+                };
+
+                handle.set_registered_users(VecModel::from_slice(&[]));
+                handle.set_active_exam(exam);
             }
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
