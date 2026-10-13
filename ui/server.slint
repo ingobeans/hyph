@@ -8,11 +8,16 @@ import  {
     Titlebar,
 } from "components.slint";
 
+export enum UserState {
+    TakingExam,
+    FinishedExam,
+}
 export struct RegisteredUser {
     name: string,
-    state: int,
+    state: UserState,
+    id: int,
 }
-export struct PreviousExam {
+export struct Exam {
     name: string,
     date: string,
     submissions: int,
@@ -29,7 +34,7 @@ export component ServerApp inherits AppWindow {
     callback mouse_move(length, length);
     callback show_previous_exam(int);
 
-    in property <[PreviousExam]> previous_exams: [
+    in property <[Exam]> previous_exams: [
         {
             name: "Programming test",
             date: "13/10 2026",
@@ -41,9 +46,13 @@ export component ServerApp inherits AppWindow {
             submissions: 16,
         }
     ];
-    in property <[RegisteredUser]> registered_users: [{ name:"person", state: 0 }];
+    in property <[RegisteredUser]> registered_users: [{
+        name:"Person Personson",
+        state: UserState.TakingExam,
+        id:45,
+    }];
 
-    in property <bool> exam-active;
+    in property <Exam> active-exam: { id:0 };
 
     Titlebar {
         width: parent.width;
@@ -55,7 +64,7 @@ export component ServerApp inherits AppWindow {
 
     // page before exam started
     Container {
-        visible: !exam-active;
+        visible: active-exam.id == 0;
         width: parent.width;
         height: parent.height;
         Text {
@@ -125,19 +134,63 @@ export component ServerApp inherits AppWindow {
 
     // page when exam started
     Container {
-        visible: exam-active;
+        visible: active-exam.id != 0;
         width: parent.width;
         height: parent.height;
-        HorizontalLayout {
-            alignment: start;
-            width: 200px;
+        FlexboxLayout {
+            width: parent.width - 40px;
+            max-width: parent.width;
             spacing: 20px;
-            y: 300px;
+            spacing-vertical: 20px;
+            y: 90px;
             for user in root.registered_users: Rectangle {
-                background: grey;
-                height: 20px;
-                Text {
+                width: max(user-name.width,user-state.width,cheating-indicator.width) + 10px;
+                height: 90px;
+
+                user-name := Text {
+                    font-size: 14px;
                     text: user.name;
+                    font-weight: 800;
+                    x: 5px;
+                    y: 2px;
+                }
+
+                user-state := Text {
+                    states [
+                        active when user.state == UserState.TakingExam: {
+                            text: "Currently Taking Exam";
+                            color: #2c9bf7;
+                        }
+                        active when user.state == UserState.FinishedExam: {
+                            text: "Finished Exam";
+                            color: #45e082;
+                        }
+                    ]
+                    y: 22px;
+                    x: 5px;
+                }
+
+                cheating-indicator := Text {
+                    text: "No cheating detected.";
+                    color: grey;
+                    y: 36px;
+                    x: 5px;
+                }
+
+                Button {
+                    text: "View Exam";
+                    x: 5px;
+                    width: parent.width - 10px;
+                    height: 25px;
+                    y: parent.height - self.height - 5px;
+                    // clicked => root.show_previous_exam(exam.id);
+                }
+
+                OuterBorder {
+                    padding-width: 2px;
+                    width: parent.width;
+                    height: parent.height;
+                    border-color: rgb(61, 68, 77);
                 }
             }
         }
