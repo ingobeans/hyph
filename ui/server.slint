@@ -17,13 +17,13 @@ export enum UserState {
 export struct RegisteredUser {
     name: string,
     state: UserState,
-    id: int,
+    id: duration, // use durations for ID since its represented by a 64 bit integer rather than 32 bit
 }
 export struct Exam {
     name: string,
     date: string,
     submissions: int,
-    id: int,
+    id: duration, // use durations for ID since its represented by a 64 bit integer rather than 32 bit
     ended: bool,
 }
 
@@ -39,7 +39,7 @@ export component ServerApp inherits AppWindow {
 
     callback close_program();
     callback mouse_move(length, length);
-    callback show_previous_exam(int);
+    callback show_previous_exam(duration);
     callback back_exam();
     callback new_exam(string);
 
@@ -58,7 +58,7 @@ export component ServerApp inherits AppWindow {
     in property <[RegisteredUser]> registered_users: [{
         name:"Person Personson",
         state: UserState.TakingExam,
-        id:45,
+        id:45ms,
     }];
 
     in property <Exam> active-exam: { id:0 };

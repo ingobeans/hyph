@@ -25,7 +25,7 @@ fn load_previous_exams(base: &Path) -> Vec<Exam> {
             continue;
         }
 
-        let Ok(id): Result<u32, _> = item.file_name().to_string_lossy().parse() else {
+        let Ok(id): Result<u64, _> = item.file_name().to_string_lossy().parse() else {
             continue;
         };
         let id = id.cast_signed();
@@ -164,7 +164,7 @@ fn main() {
             if let Some(handle) = handle.upgrade() {
                 let date = Local::now();
                 let date_text: String = format!("{}", date.format("%d/%m %Y"));
-                let id: i32 = rand::random();
+                let id: i64 = rand::random();
 
                 let exam_path = exams_base.join(id.cast_unsigned().to_string());
                 println!("^ {id}");
