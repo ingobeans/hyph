@@ -152,13 +152,45 @@ export component ServerApp inherits AppWindow {
             }
         }
 
+        dark-overlay := Rectangle {
+            visible: name-input.visible;
+            width: root.width;
+            height: root.height - 40px;
+            y: 40px;
+            background: rgba(10,10,10,0.3);
+        }
+
         name-input := PopupDialog {
             visible: true;
             title: "Enter exam name";
+            height: 155px;
             Text {
                 text: "Enter a name for the exam";
                 x: 15px;
                 y: 40px;
+            }
+
+            LineInput {
+                x: 18px;
+                y: 70px;
+                width: parent.width - 36px;
+            }
+
+            HorizontalLayout {
+                alignment: start;
+                y: parent.height - self.height - 10px;
+                x: 15px;
+                height: 30px;
+                spacing: 5px;
+                ColoredButton {
+                    text: "Create";
+                    color: #45e082;
+                }
+
+                Button {
+                    text: "Cancel";
+                    clicked => root.hide();
+                }
             }
         }
     }
