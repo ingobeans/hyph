@@ -5,8 +5,9 @@ import  {
     Container,
     AppWindow,
     Titlebar,
-    Button,
+    ColoredButton,
 } from "components.slint";
+import { Button } from "std-widgets.slint";
 
 export component ClientApp inherits AppWindow {
     title: "Exam Controller";
@@ -104,7 +105,7 @@ export component ClientApp inherits AppWindow {
         width: 240px;
         alignment: start;
         spacing: 10px;
-        Button {
+        ColoredButton {
             enabled: root.ping-success && root.ping-enabled && root.start-exam-enabled;
             width: 240px;
             height: 40px;
@@ -144,7 +145,7 @@ export component ClientApp inherits AppWindow {
         width: 240px;
         alignment: start;
         spacing: 10px;
-        Button {
+        ColoredButton {
             visible: root.exam-active || root.exam-stopped;
             enabled: !root.exam-stopped;
             width: 240px;
