@@ -158,6 +158,10 @@ export component ServerApp inherits AppWindow {
             height: root.height - 40px;
             y: 40px;
             background: rgba(10,10,10,0.3);
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+            }
         }
 
         name-input := PopupDialog {
