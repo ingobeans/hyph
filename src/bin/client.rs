@@ -28,7 +28,7 @@ fn main() -> std::io::Result<()> {
     let client = Client::new(String::new());
     let client_rc = Rc::new(Mutex::new(client));
 
-    let app = App::new().unwrap();
+    let app = ClientApp::new().unwrap();
 
     app.set_username(format!("Logged in as: {name}").to_shared_string());
 
@@ -222,7 +222,11 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-async fn submit_exam(c: Rc<Mutex<Client>>, folder: Option<PathBuf>, handle: Rc<slint::Weak<App>>) {
+async fn submit_exam(
+    c: Rc<Mutex<Client>>,
+    folder: Option<PathBuf>,
+    handle: Rc<slint::Weak<ClientApp>>,
+) {
     let state = {
         let mut c = c.lock().unwrap();
         match c.monitoring_thread.take() {

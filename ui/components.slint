@@ -1,0 +1,178 @@
+import { Button } from "std-widgets.slint";
+
+export component OuterBorder {
+    in property <brush> border-color;
+    in property <length> padding-width;
+    Rectangle {
+        x: -parent.padding-width;
+        y: -parent.padding-width - 1px;
+        width: (parent.width) + 1px + parent.padding-width * 2;
+        height: 1px;
+        background: parent.border-color;
+    }
+
+    Rectangle {
+        x: -parent.padding-width - 1px;
+        y: -parent.padding-width - 1px;
+        width: 1px;
+        height: (parent.height) + 1px * 2 + parent.padding-width * 2;
+        background: parent.border-color;
+    }
+
+    Rectangle {
+        x: -parent.padding-width;
+        y: (parent.height) + parent.padding-width;
+        width: (parent.width) + 1px + parent.padding-width * 2;
+        height: 1px;
+        background: parent.border-color;
+    }
+
+    Rectangle {
+        x: parent.width + parent.padding-width;
+        y: -parent.padding-width;
+        width: 1px;
+        height: (parent.height) + 1px + parent.padding-width * 2;
+        background: parent.border-color;
+    }
+}
+
+export component Container {
+    @children
+}
+
+export component LineInput {
+    width: 260px;
+    height: 30px;
+    in property <length> padding-width: 8px;
+    out property <string> out-text;
+    in property <bool> enabled;
+    TextInput {
+        width: (parent.width) - root.padding-width;
+        height: (parent.height) - root.padding-width;
+        single-line: true;
+        font-size: 20px;
+        enabled: root.enabled;
+        changed text => {
+            parent.out-text = self.text;
+        };
+        OuterBorder {
+            padding-width: root.padding-width;
+            width: parent.width;
+            height: parent.height;
+            border-color: rgb(61, 68, 77);
+        }
+    }
+}
+
+export component ImageButton inherits TouchArea {
+    in property <image> image: @image-url("assets/close.png");
+    in property <brush> normal-color: white;
+    in property <brush> hover-color: #b4b4b4;
+    in property <brush> clicked-color: #a0a0a0;
+
+    img := Image {
+        width: parent.width;
+        height: parent.height;
+        source: root.image;
+        colorize: white;
+    }
+
+    changed enabled => {
+        if (self.enabled) {
+            if (self.pressed) {
+                img.colorize = root.clicked-color;
+            } else if (self.has-hover) {
+                img.colorize = root.hover-color;
+            } else {
+                img.colorize = root.normal-color;
+            }
+        } else {
+            img.colorize = root.clicked-color;
+        }
+    }
+
+    changed has-hover => {
+        if (self.enabled) {
+            if (self.pressed) {
+                img.colorize = root.clicked-color;
+            } else if (self.has-hover) {
+                img.colorize = root.hover-color;
+            } else {
+                img.colorize = root.normal-color;
+            }
+        } else {
+            img.colorize = root.clicked-color;
+        }
+    }
+
+    pointer-event() => {
+        if (self.enabled) {
+            if (self.pressed) {
+                img.colorize = root.clicked-color;
+            } else if (self.has-hover) {
+                img.colorize = root.hover-color;
+            } else {
+                img.colorize = root.normal-color;
+            }
+        } else {
+            img.colorize = root.clicked-color;
+        }
+    }
+}
+
+export component Titlebar {
+    callback mouse_move(length, length);
+    callback close_program();
+    in property <string> titlebar-text;
+    in property <bool> close-enabled: true;
+
+    TouchArea {
+        y: 0;
+        height: 40px;
+        Rectangle {
+            background: #010409;
+            OuterBorder {
+                padding-width: -1px;
+                width: parent.width;
+                height: parent.height;
+                border-color: rgb(61, 68, 77);
+            }
+        }
+
+        moved => {
+            if (self.pressed) {
+                root.mouse_move((self.mouse_x) - self.pressed_x, (self.mouse_y) - self.pressed_y);
+            }
+        }
+    }
+
+    OuterBorder {
+        padding-width: -1px;
+        width: parent.width;
+        height: parent.height;
+        border-color: rgb(61, 68, 77);
+    }
+
+    Text {
+        text: root.titlebar-text;
+        font-size: 28px;
+        y: 3px;
+    }
+
+    ImageButton {
+        enabled: root.close-enabled;
+        width: 30px;
+        height: 30px;
+        x: (parent.width) - (self.width) - 5px;
+        y: 5px;
+
+        clicked => close_program();
+    }
+}
+
+export component AppWindow inherits Window {
+    background: rgb(13, 17, 23);
+    no-frame: true;
+    width: 990px;
+    height: 450px;
+}
