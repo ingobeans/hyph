@@ -46,13 +46,15 @@ fn load_previous_exams(base: &Path) -> Vec<Exam> {
     previous_exams
 }
 
-fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> {
+async fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> {
     let mut users = Vec::new();
 
     let submissions_path = base.join(exam.id.to_string()).join("submissions");
 
-    for submission in std::fs::read_dir(submissions_path).unwrap().flatten() {
-        if submission.file_type().unwrap().is_file() {
+    let mut iterator = tokio::fs::read_dir(submissions_path).await.unwrap();
+
+    while let Some(submission) = iterator.next_entry().await.unwrap() {
+        if submission.file_type().await.unwrap().is_file() {
             continue;
         }
 
@@ -62,7 +64,7 @@ fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> {
 
         let path = submission.path();
         let info_path = path.join("info.txt");
-        let Ok(info) = std::fs::read_to_string(info_path) else {
+        let Ok(info) = tokio::fs::read_to_string(info_path).await else {
             continue;
         };
         let mut info_rows = info.split("\n");
@@ -119,16 +121,20 @@ fn main() {
     let handle = app_handle.clone();
     let previous_exams = previous_exams_rc.clone();
     app.on_show_previous_exam(move |id| {
-        let Some(exam) = previous_exams.iter().find(|a| a.id == id) else {
-            return;
+        let previous_exams = previous_exams.clone();
+        let handle = handle.clone();
+        let exams_base = exams_base.clone();
+        let future = async move {
+            if let Some(handle) = handle.upgrade() {
+                let Some(exam) = previous_exams.iter().find(|a| a.id == id) else {
+                    return;
+                };
+                let submissions = load_exam_submissions(exam, &exams_base).await;
+                handle.set_registered_users(VecModel::from_slice(&submissions));
+                handle.set_active_exam(exam.clone());
+            }
         };
-        if let Some(handle) = handle.upgrade() {
-            handle.set_registered_users(VecModel::from_slice(&load_exam_submissions(
-                exam,
-                &exams_base,
-            )));
-            handle.set_active_exam(exam.clone());
-        }
+        slint::spawn_local(async_compat::Compat::new(future)).unwrap();
     });
 
     app.run().unwrap();
