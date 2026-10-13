@@ -163,13 +163,18 @@ export component ServerApp inherits AppWindow {
         name-input := PopupDialog {
             title: "Enter exam name";
             height: 155px;
+
+            on_show => {
+                name-input-input.reset();
+            }
+
             Text {
                 text: "Enter a name for the exam";
                 x: 15px;
                 y: 40px;
             }
 
-            LineInput {
+            name-input-input := LineInput {
                 x: 18px;
                 y: 70px;
                 width: parent.width - 36px;

@@ -75,7 +75,12 @@ export component LineInput {
     in property <length> padding-width: 8px;
     out property <string> out-text;
     in property <bool> enabled: true;
-    TextInput {
+
+    public function reset() {
+        input.text = "";
+    }
+
+    input := TextInput {
         width: (parent.width) - root.padding-width;
         height: (parent.height) - root.padding-width;
         single-line: true;
@@ -205,12 +210,14 @@ export component PopupDialog {
     visible: false;
     width: 400px;
     height: 150px;
+    callback on_show();
     in property <string> title;
 
     public function show(parent_width: length, parent_height: length) {
         self.x = (parent_width - self.width) / 2;
         self.y = (parent_height - self.height) / 2;
         self.visible = true;
+        on_show();
     }
     public function hide() {
         self.visible = false;
