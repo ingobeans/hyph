@@ -6,6 +6,7 @@ import  {
     Container,
     AppWindow,
     Titlebar,
+    ColoredButton,
 } from "components.slint";
 
 export enum UserState {
@@ -22,6 +23,7 @@ export struct Exam {
     date: string,
     submissions: int,
     id: int,
+    ended: bool,
 }
 
 export component ServerApp inherits AppWindow {
@@ -34,6 +36,7 @@ export component ServerApp inherits AppWindow {
     callback mouse_move(length, length);
     callback show_previous_exam(int);
     callback back_exam();
+    callback new_exam();
 
     in property <[Exam]> previous_exams: [
         {
@@ -77,9 +80,19 @@ export component ServerApp inherits AppWindow {
 
         Text {
             visible: root.previous_exams.length == 0;
-            text: "No prior exams found. Click New to create one!";
+            text: "No prior exams found. Click the button below to create one!";
             y: 80px;
             x: 20px;
+        }
+
+        ColoredButton {
+            text: "New Exam";
+            height: 40px;
+            color: #45e082;
+            width: 150px;
+            y: previous_exams.length > 0 ? (parent.height - self.height - 20px) : 120px;
+            x: 20px;
+            clicked => root.new_exam();
         }
 
         FlexboxLayout {

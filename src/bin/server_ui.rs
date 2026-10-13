@@ -12,6 +12,7 @@ impl Exam {
             id: 0, // id 0 denotes null
             name: SharedString::new(),
             submissions: 0,
+            ended: false,
         }
     }
 }
@@ -51,6 +52,7 @@ fn load_previous_exams(base: &Path) -> Vec<Exam> {
             date: date.to_shared_string(),
             name: name.to_shared_string(),
             submissions: count as i32,
+            ended: true,
         };
         previous_exams.push(exam);
     }
