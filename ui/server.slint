@@ -20,8 +20,9 @@ export struct PreviousExam {
 
 export component ServerApp inherits AppWindow {
     title: "Hyph Server";
-    width: 1300px;
-    height: 650px;
+    preferred-width: 1300px;
+    preferred-height: 650px;
+    resize-border-width: 10px;
 
     callback close_program();
     callback mouse_move(length, length);
@@ -53,11 +54,26 @@ export component ServerApp inherits AppWindow {
         visible: !exam-active;
         width: parent.width;
         height: parent.height;
-        HorizontalLayout {
-            alignment: start;
-            width: 200px;
+        Text {
+            text: "Previous exams:";
+            font-size: 20px;
+            y: 50px;
+            x: 20px;
+        }
+
+        Text {
+            visible: root.previous_exams.length == 0;
+            text: "No prior exams found. Click New to create one!";
+            y: 80px;
+            x: 20px;
+        }
+
+        FlexboxLayout {
+            width: parent.width - 40px;
+            max-width: parent.width;
             spacing: 20px;
-            y: 300px;
+            spacing-vertical: 20px;
+            y: 90px;
             for exam in root.previous_exams: Rectangle {
                 width: date.width + submissions.width + 20px;
                 height: 90px;
