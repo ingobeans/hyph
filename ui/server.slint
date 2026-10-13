@@ -28,8 +28,12 @@ export struct Exam {
 
 export component ServerApp inherits AppWindow {
     title: "Hyph Server";
+
     preferred-width: 1300px;
     preferred-height: 650px;
+    min-height: 275px;
+    min-width: 275px;
+
     resize-border-width: 10px;
 
     callback close_program();
