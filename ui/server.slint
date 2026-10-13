@@ -18,6 +18,7 @@ export component ServerApp inherits AppWindow {
     width: 1300px;
     height: 650px;
 
+    callback close_program();
     callback mouse_move(length, length);
     in property <[RegisteredUser]> registered_users: [{ name:"person", state: 0 }];
 
@@ -26,6 +27,7 @@ export component ServerApp inherits AppWindow {
         height: parent.height;
         titlebar-text: "Hyph Server";
         mouse_move(a, b) => mouse_move(a,b);
+        close_program => close_program();
     }
 
     HorizontalLayout {
