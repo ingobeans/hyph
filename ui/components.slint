@@ -55,9 +55,28 @@ export component ColoredButton {
 
     Rectangle {
         border-radius: 5px;
-        background: root.enabled ? (area.has-hover ? root.color.brighter(root.color.to-hsv().value > 0.5 ? -0.1 : 0.1) : root.color) : #34373c;
         border-width: 0.5px;
         border-color: grey;
+        states [
+            disabled when !root.enabled: {
+                background: #34373c;
+                out {
+                    animate background { duration: 150ms; }
+                }
+            }
+            enabled-hovered when area.has-hover: {
+                background: root.color.brighter(root.color.to-hsv().value > 0.5 ? -0.2 : 0.2);
+                out {
+                    animate background { duration: 150ms; }
+                }
+            }
+            enabled when !area.has-hover: {
+                background: root.color;
+                out {
+                    animate background { duration: 150ms; }
+                }
+            }
+        ]
     }
 
     text-element := Text {
