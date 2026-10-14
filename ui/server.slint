@@ -61,7 +61,7 @@ export component ServerApp inherits AppWindow {
     }];
 
     in property <Exam> active-exam: {
-        id:1ms,
+        // id:1ms,
         name:"Placeholder Exam Name",
         ended: true,
         date: "14/10 2026",
@@ -234,41 +234,49 @@ export component ServerApp inherits AppWindow {
         }
 
         Text {
+            x: root.width - self.width - 10px;
             text: active-exam.date;
             font-size: 13px;
-            y: 69px;
+            y: 49px;
         }
 
-        Text {
+        active-exam-status := Text {
+            x: (root.width - (toggle-exam-open.width + active-exam-status.width + 3px)) / 2 + toggle-exam-open.width + 3px;
             font-size: 14px;
-            y: 54px;
+            y: 75.5px;
             states [
                 active when !active-exam.ended: {
-                    x: root.width - self.width - 10px;
                     text: "Exam Currently Open";
                     color: #45e082;
                 }
                 active when active-exam.ended: {
-                    x: root.width - (self.width + reopen-btn.width + 5px) - 10px;
-                    text: "Exam Ended";
+                    text: "Exam Closed";
                     color: grey;
                 }
             ]
-            Rectangle {
-                visible: !active-exam.ended;
-                x: -parent.height - 5px;
-                background: parent.color;
-                width: parent.height;
-                border-radius: parent.height;
-            }
         }
 
-        reopen-btn := Button {
-            y: 49px;
-            x: root.width - self.width - 10px;
-            visible: active-exam.ended;
-            text: "Reopen Exam";
-            height: 30px;
+        toggle-exam-open := Container {
+            x: (root.width - (toggle-exam-open.width + active-exam-status.width + 3px)) / 2;
+            y: 74px;
+            width: 20px;
+            ImageButton {
+                image: @image-url("assets/pause.png");
+                visible: !active-exam.ended;
+                height: parent.width;
+                width: parent.width;
+                x: 0;
+                y: 0;
+            }
+
+            ImageButton {
+                image: @image-url("assets/play.png");
+                visible: active-exam.ended;
+                height: parent.width;
+                width: parent.width;
+                x: 0;
+                y: 0;
+            }
         }
 
         FlexboxLayout {
