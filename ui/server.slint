@@ -1,4 +1,3 @@
-import { Button } from "std-widgets.slint";
 import  {
     OuterBorder,
     ImageButton,
@@ -6,7 +5,7 @@ import  {
     Container,
     AppWindow,
     Titlebar,
-    ColoredButton,
+    Button,
     PopupDialog,
 } from "components.slint";
 
@@ -62,7 +61,7 @@ export component ServerApp inherits AppWindow {
     }];
 
     in property <Exam> active-exam: {
-        id:0ms,
+        id:1ms,
         name:"Placeholder Exam Name",
         ended: true,
         date: "14/10 2026",
@@ -95,7 +94,7 @@ export component ServerApp inherits AppWindow {
             x: 20px;
         }
 
-        ColoredButton {
+        Button {
             text: "New Exam";
             height: 40px;
             color: #45e082;
@@ -145,6 +144,7 @@ export component ServerApp inherits AppWindow {
                     x: 5px;
                     width: parent.width - 10px;
                     y: parent.height - self.height - 5px;
+                    height: 30px;
                     clicked => root.show_previous_exam(exam.id);
                 }
 
@@ -200,7 +200,7 @@ export component ServerApp inherits AppWindow {
                 x: 15px;
                 height: 30px;
                 spacing: 5px;
-                ColoredButton {
+                Button {
                     text: "Create";
                     color: #45e082;
                     clicked => root.new_exam(exam-name-input.out-text);
@@ -223,6 +223,7 @@ export component ServerApp inherits AppWindow {
             y: 49px;
             x: 17px;
             text: "Back";
+            height: 30px;
             clicked => root.back_exam();
         }
 
@@ -240,7 +241,7 @@ export component ServerApp inherits AppWindow {
 
         Text {
             font-size: 14px;
-            y: 49px;
+            y: 54px;
             states [
                 active when !active-exam.ended: {
                     x: root.width - self.width - 10px;
@@ -260,13 +261,14 @@ export component ServerApp inherits AppWindow {
                 width: parent.height;
                 border-radius: parent.height;
             }
+        }
 
-            reopen-btn := Button {
-                visible: active-exam.ended;
-                x: parent.width + 5px;
-                text: "Reopen Exam";
-                height: 25px;
-            }
+        reopen-btn := Button {
+            y: 49px;
+            x: root.width - self.width - 10px;
+            visible: active-exam.ended;
+            text: "Reopen Exam";
+            height: 30px;
         }
 
         FlexboxLayout {
