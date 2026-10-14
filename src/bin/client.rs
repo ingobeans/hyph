@@ -24,11 +24,14 @@ mod monitoring;
 
 slint::include_modules!();
 fn main() -> std::io::Result<()> {
+    println!("Hyph Client v{}\n", env!("CARGO_PKG_VERSION"));
     let name = whoami::realname()?;
+    println!("Logged in as {name}");
     let client = Client::new(String::new());
     let client_rc = Rc::new(Mutex::new(client));
 
     let app = ClientApp::new().unwrap();
+    println!("App loaded");
 
     app.set_username(format!("Logged in as: {name}").to_shared_string());
 
@@ -154,22 +157,23 @@ fn main() -> std::io::Result<()> {
                 loop {
                     match logging_rx.try_recv() {
                         Ok(message) => {
+                            let date = Local::now();
+                            let date_text: String = format!("{}", date.format("%H:%M:%S"));
                             let message = match message {
                                 MonitoringLoggingMessage::ScreenshotError(err) => {
-                                    let date = Local::now();
-                                    let text: String = format!("{}", date.format("%H:%M:%S"));
                                     format!(
-                                        "Error encountered while monitoring exam: {err:?} ({text})"
+                                        "Error encountered while monitoring exam: {err:?} ({date_text})"
                                     )
-                                    .to_shared_string()
                                 }
                                 MonitoringLoggingMessage::ListProgramsError => {
-                                    "Error encountered while monitoring exam".to_shared_string()
+                                    format!("Error encountered while monitoring exam, couldn't get programs list. ({date_text})")
                                 }
                             };
 
+                            println!("{message}");
+
                             if let Some(handle) = handle.upgrade() {
-                                handle.set_monitoring_logging(message);
+                                handle.set_monitoring_logging(message.to_shared_string());
                             }
                         }
                         Err(TryRecvError::Disconnected) => {
