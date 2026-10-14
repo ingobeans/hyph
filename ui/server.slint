@@ -30,8 +30,8 @@ export struct Exam {
 export component ServerApp inherits AppWindow {
     title: "Hyph Server";
 
-    preferred-width: 1300px;
-    preferred-height: 650px;
+    preferred-width: 1030px;
+    preferred-height: 520px;
     min-height: 275px;
     min-width: 275px;
 
@@ -61,7 +61,12 @@ export component ServerApp inherits AppWindow {
         id:45ms,
     }];
 
-    in property <Exam> active-exam: { id:0 };
+    in property <Exam> active-exam: {
+        id:0ms,
+        name:"Placeholder Exam Name",
+        ended: true,
+        date: "14/10 2026",
+    };
 
     Titlebar {
         width: parent.width;
@@ -215,10 +220,53 @@ export component ServerApp inherits AppWindow {
         width: parent.width;
         height: parent.height;
         Button {
-            x: 17px;
             y: 49px;
+            x: 17px;
             text: "Back";
             clicked => root.back_exam();
+        }
+
+        Text {
+            text: active-exam.name;
+            font-size: 20px;
+            y: 49px;
+        }
+
+        Text {
+            text: active-exam.date;
+            font-size: 13px;
+            y: 69px;
+        }
+
+        Text {
+            font-size: 14px;
+            y: 49px;
+            states [
+                active when !active-exam.ended: {
+                    x: root.width - self.width - 10px;
+                    text: "Exam Currently Open";
+                    color: #45e082;
+                }
+                active when active-exam.ended: {
+                    x: root.width - (self.width + reopen-btn.width + 5px) - 10px;
+                    text: "Exam Ended";
+                    color: grey;
+                }
+            ]
+            Rectangle {
+                visible: !active-exam.ended;
+                x: -parent.height - 5px;
+                background: parent.color;
+                width: parent.height;
+                border-radius: parent.height;
+            }
+
+            reopen-btn := Button {
+                visible: active-exam.ended;
+                x: parent.width + 5px;
+                text: "Reopen Exam";
+                height: 25px;
+            }
         }
 
         FlexboxLayout {

@@ -40,9 +40,10 @@ export component ColoredButton {
     in property <bool> enabled: true;
     in property <string> text: "Button";
     in property <brush> color: #1B1F25;
+    in property <length> padding-width: 30px;
     callback clicked();
 
-    width: text-element.width + 30px;
+    width: text-element.width + padding-width;
 
     area := TouchArea {
         clicked => {

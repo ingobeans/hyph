@@ -167,7 +167,6 @@ fn main() {
                 let id: i64 = rand::random();
 
                 let exam_path = exams_base.join(id.cast_unsigned().to_string());
-                println!("^ {id}");
 
                 tokio::fs::create_dir_all(exam_path.join("submissions"))
                     .await
