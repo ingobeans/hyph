@@ -192,7 +192,7 @@ fn main() {
 
                 let exam = Exam {
                     date: date_text.to_shared_string(),
-                    ended: false,
+                    ended: true,
                     id,
                     name,
                     submissions: 0,
