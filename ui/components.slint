@@ -120,16 +120,24 @@ export component LineInput {
 }
 
 export component ImageButton inherits TouchArea {
-    in property <image> image: @image-url("assets/close.png");
+    in property <image> image: @image-url("assets/cross.png");
     in property <brush> normal-color: white;
     in property <brush> hover-color: #b4b4b4;
     in property <brush> clicked-color: #a0a0a0;
 
     img := Image {
-        width: parent.width;
-        height: parent.height;
         source: root.image;
         colorize: white;
+        width: parent.width - 5px;
+        height: parent.height - 5px;
+    }
+
+    Rectangle {
+        border-color: img.colorize;
+        border-width: 0.5px;
+        width: parent.width;
+        height: parent.height;
+        border-radius: 2px;
     }
 
     changed enabled => {
