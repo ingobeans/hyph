@@ -144,7 +144,7 @@ fn main() -> std::io::Result<()> {
                 handle.set_start_exam_fail(state.is_none());
                 if state.is_some() {
                     handle.set_exam_active(true);
-                    println!("Started exam.");
+                    println!("Started exam.\n");
                 } else {
                     handle.set_ping_enabled(true);
                     handle.set_start_exam_enabled(true);

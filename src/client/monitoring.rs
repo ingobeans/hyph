@@ -215,7 +215,7 @@ fn run_monitoring(
         after.duration_since(now).as_millis() as f32 / 1000.0
     );
 
-    println!("finished creating exam data ZIP.");
+    println!("Finished creating exam data ZIP.");
     Ok(())
 }
 
