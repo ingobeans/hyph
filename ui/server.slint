@@ -41,6 +41,8 @@ export component ServerApp inherits AppWindow {
     callback show_previous_exam(duration);
     callback back_exam();
     callback new_exam(string);
+    callback start_exam(Exam);
+    callback stop_exam();
 
     in property <[Exam]> previous_exams: [
         {
@@ -267,6 +269,7 @@ export component ServerApp inherits AppWindow {
                 width: parent.width;
                 x: 0;
                 y: 0;
+                clicked => root.stop_exam();
             }
 
             ImageButton {
@@ -276,6 +279,7 @@ export component ServerApp inherits AppWindow {
                 width: parent.width;
                 x: 0;
                 y: 0;
+                clicked => root.start_exam(active-exam);
             }
         }
 
