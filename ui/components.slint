@@ -79,6 +79,9 @@ export component LineInput {
     public function reset() {
         input.text = "";
     }
+    public function set_focus() {
+        input.focus();
+    }
 
     input := TextInput {
         width: (parent.width) - root.padding-width;
