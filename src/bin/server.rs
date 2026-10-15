@@ -216,13 +216,18 @@ fn main() {
 
         let future = async move {
             let registered_clients = Arc::new(Mutex::new(HashMap::new()));
-            let mut server =
-                Server::new(format!("0.0.0.0:{}", PORT), registered_clients, exam_path);
+
+            let Ok((mut server, logging_rx, terminate_tx)) =
+                Server::start(format!("0.0.0.0:{}", PORT), registered_clients, exam_path).await
+            else {
+                println!("todo: server log fail");
+                return;
+            };
 
             exam.ended = false;
             handle.set_active_exam(exam);
 
-            let _res = server.listen().await;
+            server.listen().await;
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
     });

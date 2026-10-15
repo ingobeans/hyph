@@ -3,7 +3,10 @@ use std::{
     io::{self},
     net::SocketAddr,
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        mpsc::{self, Receiver, Sender},
+    },
 };
 
 use tokio::{
@@ -23,12 +26,60 @@ pub struct ServersideClient {
     name: String,
 }
 
+pub enum ServerBackendMessage {}
+
 pub struct Server {
     addr: String,
     registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>,
     exam_path: PathBuf,
+    listener: TcpListener,
+    logging_tx: Sender<ServerBackendMessage>,
+    terminate_rx: Receiver<()>,
 }
 impl Server {
+    pub async fn start(
+        addr: String,
+        registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>,
+        exam_path: PathBuf,
+    ) -> std::io::Result<(Self, Receiver<ServerBackendMessage>, Sender<()>)> {
+        let (terminate_tx, terminate_rx) = mpsc::channel();
+        let (logging_tx, logging_rx) = mpsc::channel();
+        let listener = TcpListener::bind(&addr).await?;
+        println!("connected to socket");
+
+        let new = Self {
+            addr,
+            registered_clients,
+            exam_path,
+            listener,
+            logging_tx,
+            terminate_rx,
+        };
+        Ok((new, logging_rx, terminate_tx))
+    }
+    pub async fn listen(&mut self) {
+        let received_path = Arc::new(self.exam_path.join("received"));
+        let submission_path = Arc::new(self.exam_path.join("submissions"));
+        loop {
+            let received_path = received_path.clone();
+            let submission_path = submission_path.clone();
+            match self.listener.accept().await {
+                Ok((socket, addr)) => {
+                    let a = self.registered_clients.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) =
+                            Self::handle_connection(socket, addr, a, received_path, submission_path)
+                                .await
+                        {
+                            eprintln!("[Connection Crashed] ({addr}): {e}");
+                        }
+                    });
+                }
+                Err(e) => println!("client failed connecting: {e:?}"),
+            }
+        }
+    }
+
     async fn handle_connection(
         mut socket: TcpStream,
         addr: SocketAddr,
@@ -115,41 +166,5 @@ impl Server {
         }
 
         Ok(())
-    }
-    pub fn new(
-        addr: String,
-        registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>,
-        exam_path: PathBuf,
-    ) -> Self {
-        Self {
-            addr,
-            registered_clients,
-            exam_path,
-        }
-    }
-    pub async fn listen(&mut self) -> io::Result<()> {
-        let listener = TcpListener::bind(&self.addr).await?;
-        println!("connected to socket");
-
-        let received_path = Arc::new(self.exam_path.join("received"));
-        let submission_path = Arc::new(self.exam_path.join("submissions"));
-        loop {
-            let received_path = received_path.clone();
-            let submission_path = submission_path.clone();
-            match listener.accept().await {
-                Ok((socket, addr)) => {
-                    let a = self.registered_clients.clone();
-                    tokio::spawn(async move {
-                        if let Err(e) =
-                            Self::handle_connection(socket, addr, a, received_path, submission_path)
-                                .await
-                        {
-                            eprintln!("[Connection Crashed] ({addr}): {e}");
-                        }
-                    });
-                }
-                Err(e) => println!("client failed connecting: {e:?}"),
-            }
-        }
     }
 }
