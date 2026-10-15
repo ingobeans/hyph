@@ -80,16 +80,24 @@ fn main() -> std::io::Result<()> {
     app.on_ping_click(move || {
         let c = c.clone();
         let handle = handle.clone();
-        let mut addr = String::new();
-        if let Some(handle) = handle.upgrade() {
-            handle.set_ping_enabled(false);
-            handle.set_ping_success(false);
-            handle.set_ping_fail(false);
-            handle.set_start_exam_success(false);
-            handle.set_start_exam_fail(false);
+        let Some(handle) = handle.upgrade() else {
+            return;
+        };
 
+        let ip = handle.get_ip_address();
+        if ip.is_empty() {
+            return;
+        }
+        let addr = format!("{}:{}", ip, PORT);
+
+        handle.set_ping_enabled(false);
+        handle.set_ping_success(false);
+        handle.set_ping_fail(false);
+        handle.set_start_exam_success(false);
+        handle.set_start_exam_fail(false);
+
+        {
             let mut c = c.lock().unwrap();
-            addr = format!("{}:{}", handle.get_ip_address(), PORT);
             c.addr = addr.clone();
         }
 
@@ -99,15 +107,13 @@ fn main() -> std::io::Result<()> {
                 c.ping_server().await.is_ok()
             };
 
-            if let Some(handle) = handle.upgrade() {
-                handle.set_ping_enabled(true);
-                handle.set_ping_success(state);
-                handle.set_ping_fail(!state);
+            handle.set_ping_enabled(true);
+            handle.set_ping_success(state);
+            handle.set_ping_fail(!state);
 
-                if state {
-                    println!("Connected to: {}", addr)
-                };
-            }
+            if state {
+                println!("Connected to: {}", addr)
+            };
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
     });
