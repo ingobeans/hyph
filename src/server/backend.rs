@@ -61,6 +61,12 @@ impl Server {
         let received_path = Arc::new(exam_path.join("received"));
         let submission_path = Arc::new(exam_path.join("submissions"));
 
+        // clear all previous pending requests
+        while let Poll::Ready(_) = self
+            .listener
+            .poll_accept(&mut Context::from_waker(Waker::noop()))
+        {}
+
         loop {
             let received_path = received_path.clone();
             let submission_path = submission_path.clone();
