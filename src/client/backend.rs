@@ -54,6 +54,7 @@ impl Client {
     }
 
     pub async fn ping_server(&self) -> io::Result<()> {
+        // todo: add timeout (perhaps https://crates.io/crates/tokio-io-timeout)
         let mut stream = TcpStream::connect(&self.addr).await?;
         stream.write_all(&[ClientMessageType::Ping as u8]).await?;
         let mut resp_buf = [0u8];

@@ -117,9 +117,32 @@ fn main() {
     let app = ServerApp::new().unwrap();
 
     app.set_previous_exams(VecModel::from_slice(&previous_exams));
-    let previous_exams_rc = Rc::new(previous_exams);
 
+    let previous_exams_rc = Rc::new(previous_exams);
     let app_handle = Rc::new(app.as_weak());
+
+    let server_backend = Rc::new(Mutex::new(None));
+    let listener_terminate = Rc::new(Mutex::new(None));
+    let listener_logger = Rc::new(Mutex::new(None));
+
+    let server_backend_rc = server_backend.clone();
+    let listener_terminate_rc = listener_terminate.clone();
+    let listener_logger_rc = listener_logger.clone();
+
+    let future = async move {
+        let Ok((server, logging_rx, terminate_tx)) =
+            Server::start(format!("0.0.0.0:{}", PORT)).await
+        else {
+            println!("todo: server log fail");
+            return;
+        };
+
+        *server_backend_rc.lock().unwrap() = Some(server);
+        *listener_terminate_rc.lock().unwrap() = Some(terminate_tx);
+        *listener_logger_rc.lock().unwrap() = Some(logging_rx);
+    };
+
+    slint::spawn_local(async_compat::Compat::new(future)).unwrap();
 
     let handle = app_handle.clone();
     app.on_close_program(move || {
@@ -207,27 +230,36 @@ fn main() {
 
     let handle = app_handle.clone();
     let exams_base_clone = exams_base.clone();
+
+    let server_backend_rc = server_backend.clone();
+    let listener_logger_rc = listener_logger.clone();
     app.on_start_exam(move |mut exam| {
         let Some(handle) = handle.clone().upgrade() else {
             return;
         };
+        let server_backend = server_backend_rc.clone();
+        let listener_logger = listener_logger_rc.clone();
+
         let exams_base = exams_base_clone.clone();
         let exam_path = exams_base.join(exam.id.cast_unsigned().to_string());
 
         let future = async move {
+            let mut server_backend = server_backend.lock().unwrap();
+            let mut listener_logger = listener_logger.lock().unwrap();
+            let server_backend = server_backend.as_mut().unwrap();
+            let listener_logger = listener_logger.as_mut().unwrap();
             let registered_clients = Arc::new(Mutex::new(HashMap::new()));
-
-            let Ok((mut server, logging_rx, terminate_tx)) =
-                Server::start(format!("0.0.0.0:{}", PORT), registered_clients, exam_path).await
-            else {
-                println!("todo: server log fail");
-                return;
-            };
 
             exam.ended = false;
             handle.set_active_exam(exam);
 
-            server.listen().await;
+            if server_backend
+                .listen(registered_clients, exam_path)
+                .await
+                .is_err()
+            {
+                // todo: show error
+            }
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
     });
