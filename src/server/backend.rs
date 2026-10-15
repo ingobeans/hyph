@@ -18,9 +18,6 @@ use tokio::{
 
 use crate::{RegisteredUser, UserState, backend::ServerBackendMessage::RegisterUser, utils::*};
 
-#[path = "../utils.rs"]
-mod utils;
-
 #[derive(Debug)]
 pub struct ServersideClient {
     #[expect(dead_code)]
@@ -33,7 +30,6 @@ pub enum ServerBackendMessage {
 }
 
 pub struct Server {
-    addr: String,
     listener: TcpListener,
     logging_tx: Sender<ServerBackendMessage>,
     terminate_rx: Receiver<()>,
@@ -48,7 +44,6 @@ impl Server {
         println!("connected to socket");
 
         let new = Self {
-            addr,
             listener,
             logging_tx,
             terminate_rx,
@@ -65,9 +60,10 @@ impl Server {
         let submission_path = Arc::new(exam_path.join("submissions"));
 
         // clear all previous pending requests
-        while let Poll::Ready(_) = self
+        while self
             .listener
             .poll_accept(&mut Context::from_waker(Waker::noop()))
+            .is_ready()
         {}
 
         loop {

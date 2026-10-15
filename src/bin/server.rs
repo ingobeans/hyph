@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     rc::Rc,
-    sync::{Arc, Mutex, mpsc::TryRecvError},
+    sync::{Mutex, mpsc::TryRecvError},
     time::Duration,
 };
 
