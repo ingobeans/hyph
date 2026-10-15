@@ -2,11 +2,8 @@ use std::{
     collections::{HashMap, hash_map::Entry},
     net::SocketAddr,
     path::PathBuf,
-    sync::{
-        Arc, Mutex,
-        mpsc::{self, Receiver, Sender},
-    },
-    task::{Context, Poll, Waker},
+    sync::{Arc, Mutex, mpsc},
+    task::{Context, Waker},
 };
 
 use slint::ToSharedString;
@@ -14,6 +11,7 @@ use tokio::{
     fs,
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
+    sync::mpsc::{Receiver, Sender, channel},
 };
 
 use crate::{RegisteredUser, UserState, backend::ServerBackendMessage::RegisterUser, utils::*};
@@ -38,8 +36,8 @@ impl Server {
     pub async fn start(
         addr: String,
     ) -> std::io::Result<(Self, Receiver<ServerBackendMessage>, Sender<()>)> {
-        let (terminate_tx, terminate_rx) = mpsc::channel();
-        let (logging_tx, logging_rx) = mpsc::channel();
+        let (terminate_tx, terminate_rx) = channel(10);
+        let (logging_tx, logging_rx) = channel(10);
         let listener = TcpListener::bind(&addr).await?;
         println!("connected to socket");
 
@@ -85,7 +83,10 @@ impl Server {
                         .await
                         {
                             eprintln!("[Connection Crashed] ({addr}): {e}");
-                            logging_tx.send(ServerBackendMessage::IoError(e)).unwrap();
+                            logging_tx
+                                .send(ServerBackendMessage::IoError(e))
+                                .await
+                                .unwrap();
                         }
                     });
                 }
@@ -158,6 +159,7 @@ impl Server {
                             name: name_shared_string,
                             state: UserState::TakingExam,
                         }))
+                        .await
                         .unwrap();
                 }
             }

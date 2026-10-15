@@ -2,12 +2,13 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     rc::Rc,
-    sync::{Mutex, mpsc::TryRecvError},
+    sync::Mutex,
     time::Duration,
 };
 
 use chrono::Local;
 use slint::{SharedString, ToSharedString, VecModel};
+use tokio::sync::mpsc::error::TryRecvError;
 
 use crate::{backend::*, utils::*};
 
@@ -262,21 +263,18 @@ fn main() {
             let mut clients = vec![];
 
             loop {
-                match listener_logger.try_recv() {
-                    Ok(message) => match message {
+                match listener_logger.recv().await {
+                    Some(message) => match message {
                         ServerBackendMessage::RegisterUser(user) => {
                             clients.push(user);
                             handle.set_registered_users(VecModel::from_slice(&clients));
                         }
                         _ => {}
                     },
-                    Err(TryRecvError::Disconnected) => {
+                    None => {
                         break;
                     }
-                    Err(TryRecvError::Empty) => {}
                 }
-                // todo: not this. use tokio's mpvc?
-                tokio::time::sleep(Duration::from_millis(100)).await;
             }
 
             if listen_future.await.is_err() {

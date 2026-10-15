@@ -1,6 +1,6 @@
 [package]
 name = "hyph"
-version = "0.7.4"
+version = "0.7.5"
 edition = "2024"
 build = "build.rs"
 
@@ -14,6 +14,7 @@ tokio = { version = "1.53.2", features = [
     "io-util",
     "fs",
     "time",
+    "sync",
 ] }
 num-derive = "0.5"
 num-traits = "0.2"
