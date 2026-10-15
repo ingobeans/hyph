@@ -250,7 +250,7 @@ fn main() {
             let mut listener_logger = listener_logger.lock().unwrap();
             let mut server_backend = server_backend.take().unwrap();
             let listener_logger = listener_logger.as_mut().unwrap();
-            let registered_clients = HashMap::new();
+            let registered_clients = Vec::new();
 
             exam.ended = false;
             handle.set_active_exam(exam);

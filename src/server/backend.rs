@@ -16,12 +16,6 @@ use tokio::{
 
 use crate::{RegisteredUser, UserState, backend::ServerBackendMessage::RegisterUser, utils::*};
 
-#[derive(Debug)]
-pub struct ServersideClient {
-    #[expect(dead_code)]
-    name: String,
-}
-
 pub enum ServerBackendMessage {
     IoError(std::io::Error),
     RegisterUser(RegisteredUser),
@@ -51,7 +45,7 @@ impl Server {
     }
     pub async fn listen(
         &mut self,
-        registered_clients: HashMap<u64, ServersideClient>,
+        registered_clients: Vec<u64>,
         exam_path: PathBuf,
     ) -> std::io::Result<()> {
         let registered_clients = Arc::new(Mutex::new(registered_clients));
@@ -99,7 +93,7 @@ impl Server {
     async fn handle_connection(
         mut socket: TcpStream,
         addr: SocketAddr,
-        registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>,
+        registered_clients: Arc<Mutex<Vec<u64>>>,
         received_path: Arc<PathBuf>,
         submissions_path: Arc<PathBuf>,
         logging_tx: Sender<ServerBackendMessage>,
@@ -141,13 +135,13 @@ impl Server {
 
                 let result = {
                     let mut lock = registered_clients.lock().unwrap();
-                    if let Entry::Vacant(e) = lock.entry(id) {
-                        println!("{message} registered user '{name_buf}'!");
-                        e.insert(ServersideClient { name: name_buf });
-                        1
-                    } else {
+                    if lock.contains(&id) {
                         println!("{message} failed to register user, ID already used!");
                         0
+                    } else {
+                        println!("{message} registered user '{name_buf}'!");
+                        lock.push(id);
+                        1
                     }
                 };
                 socket
