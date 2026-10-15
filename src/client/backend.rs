@@ -1,4 +1,5 @@
 use std::io::{self, Read};
+use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -13,6 +14,17 @@ pub enum MonitoringState {
 impl MonitoringState {
     pub fn take(&mut self) -> MonitoringState {
         std::mem::replace(self, MonitoringState::Ended)
+    }
+}
+
+async fn read_exact_with_timeout(
+    stream: &mut TcpStream,
+    buf: &mut [u8],
+    timeout: Duration,
+) -> io::Result<usize> {
+    match tokio::time::timeout(timeout, stream.read_exact(buf)).await {
+        Ok(result) => result,
+        Err(_) => std::io::Result::Err(std::io::Error::other("Request timed out")),
     }
 }
 
@@ -54,11 +66,11 @@ impl Client {
     }
 
     pub async fn ping_server(&self) -> io::Result<()> {
-        // todo: add timeout (perhaps https://crates.io/crates/tokio-io-timeout)
         let mut stream = TcpStream::connect(&self.addr).await?;
         stream.write_all(&[ClientMessageType::Ping as u8]).await?;
         let mut resp_buf = [0u8];
-        stream.read_exact(&mut resp_buf).await?;
+        read_exact_with_timeout(&mut stream, &mut resp_buf, Duration::from_secs(5)).await?;
+
         let message_type: ServerMessageType = parse_message_type(resp_buf[0])?;
         if message_type != ServerMessageType::Pong {
             return std::io::Result::Err(std::io::Error::other("Incorrect ping response"));
@@ -97,7 +109,8 @@ impl Client {
         stream.write_all(&bytes).await?;
 
         let mut resp_buf = [0u8; 2];
-        stream.read_exact(&mut resp_buf).await?;
+        read_exact_with_timeout(&mut stream, &mut resp_buf, Duration::from_secs(10)).await?;
+
         let message_type: ServerMessageType = parse_message_type(resp_buf[0])?;
         if message_type != ServerMessageType::RegisterStatus {
             return std::io::Result::Err(std::io::Error::other("Incorrect register status"));
