@@ -2,7 +2,8 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     rc::Rc,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, mpsc::TryRecvError},
+    time::Duration,
 };
 
 use chrono::Local;
@@ -246,18 +247,39 @@ fn main() {
         let future = async move {
             let mut server_backend = server_backend.lock().unwrap();
             let mut listener_logger = listener_logger.lock().unwrap();
-            let server_backend = server_backend.as_mut().unwrap();
+            let mut server_backend = server_backend.take().unwrap();
             let listener_logger = listener_logger.as_mut().unwrap();
-            let registered_clients = Arc::new(Mutex::new(HashMap::new()));
+            let registered_clients = HashMap::new();
 
             exam.ended = false;
             handle.set_active_exam(exam);
 
-            if server_backend
-                .listen(registered_clients, exam_path)
-                .await
-                .is_err()
-            {
+            let listen_future =
+                tokio::spawn(
+                    async move { server_backend.listen(registered_clients, exam_path).await },
+                );
+
+            let mut clients = vec![];
+
+            loop {
+                match listener_logger.try_recv() {
+                    Ok(message) => match message {
+                        ServerBackendMessage::RegisterUser(user) => {
+                            clients.push(user);
+                            handle.set_registered_users(VecModel::from_slice(&clients));
+                        }
+                        _ => {}
+                    },
+                    Err(TryRecvError::Disconnected) => {
+                        break;
+                    }
+                    Err(TryRecvError::Empty) => {}
+                }
+                // todo: not this. use tokio's mpvc?
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+
+            if listen_future.await.is_err() {
                 // todo: show error
             }
         };

@@ -9,13 +9,14 @@ use std::{
     task::{Context, Poll, Waker},
 };
 
+use slint::ToSharedString;
 use tokio::{
     fs,
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
 };
 
-use crate::utils::*;
+use crate::{RegisteredUser, UserState, backend::ServerBackendMessage::RegisterUser, utils::*};
 
 #[path = "../utils.rs"]
 mod utils;
@@ -28,6 +29,7 @@ pub struct ServersideClient {
 
 pub enum ServerBackendMessage {
     IoError(std::io::Error),
+    RegisterUser(RegisteredUser),
 }
 
 pub struct Server {
@@ -55,9 +57,10 @@ impl Server {
     }
     pub async fn listen(
         &mut self,
-        registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>,
+        registered_clients: HashMap<u64, ServersideClient>,
         exam_path: PathBuf,
     ) -> std::io::Result<()> {
+        let registered_clients = Arc::new(Mutex::new(registered_clients));
         let received_path = Arc::new(exam_path.join("received"));
         let submission_path = Arc::new(exam_path.join("submissions"));
 
@@ -75,9 +78,15 @@ impl Server {
                     let logging_tx = self.logging_tx.clone();
                     let a = registered_clients.clone();
                     tokio::spawn(async move {
-                        if let Err(e) =
-                            Self::handle_connection(socket, addr, a, received_path, submission_path)
-                                .await
+                        if let Err(e) = Self::handle_connection(
+                            socket,
+                            addr,
+                            a,
+                            received_path,
+                            submission_path,
+                            logging_tx.clone(),
+                        )
+                        .await
                         {
                             eprintln!("[Connection Crashed] ({addr}): {e}");
                             logging_tx.send(ServerBackendMessage::IoError(e)).unwrap();
@@ -95,6 +104,7 @@ impl Server {
         registered_clients: Arc<Mutex<HashMap<u64, ServersideClient>>>,
         received_path: Arc<PathBuf>,
         submissions_path: Arc<PathBuf>,
+        logging_tx: Sender<ServerBackendMessage>,
     ) -> std::io::Result<()> {
         let mut message_buf = [0u8];
         socket.read_exact(&mut message_buf).await?;
@@ -129,6 +139,7 @@ impl Server {
                     return Ok(());
                 }
                 let name_buf = String::from_utf8_lossy(&name_buf[..len]).to_string();
+                let name_shared_string = name_buf.to_shared_string();
 
                 let result = {
                     let mut lock = registered_clients.lock().unwrap();
@@ -144,6 +155,15 @@ impl Server {
                 socket
                     .write_all(&[ServerMessageType::RegisterStatus as u8, result])
                     .await?;
+                if result == 1 {
+                    logging_tx
+                        .send(RegisterUser(RegisteredUser {
+                            id: id as _,
+                            name: name_shared_string,
+                            state: UserState::TakingExam,
+                        }))
+                        .unwrap();
+                }
             }
             ClientMessageType::Transmit => {
                 let mut data = [0u8; 8192];
