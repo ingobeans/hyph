@@ -17,7 +17,7 @@ pub enum ClientMessageType {
     /// Sent to register the client as actively taking the test
     Register,
     /// Transmits large blocks (many MBs) of data
-    Transmit,
+    SubmitExam,
 }
 
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]

@@ -1936,7 +1936,7 @@ checksum = "48ce8546b993eaf241d69ded33b1be6d205dd9857ec879d9d18bd05d3676e144"
 
 [[package]]
 name = "hyph"
-version = "0.7.5"
+version = "0.7.6"
 dependencies = [
  "ab_glyph",
  "async-compat",

@@ -25,6 +25,7 @@ pub struct ServersideClient {
 pub enum ServerBackendMessage {
     IoError(std::io::Error),
     RegisterUser(RegisteredUser),
+    UserSubmit(u64),
 }
 
 pub struct Server {
@@ -163,7 +164,8 @@ impl Server {
                         .unwrap();
                 }
             }
-            ClientMessageType::Transmit => {
+            ClientMessageType::SubmitExam => {
+                // todo: try to find an optimal buffer size
                 let mut data = [0u8; 8192];
                 let path = received_path.join(format!("{id}.bin"));
                 let mut file = fs::File::create(&path).await?;
@@ -181,6 +183,11 @@ impl Server {
                     file.write_all(&data[..len]).await?;
                 }
                 drop(file);
+
+                logging_tx
+                    .send(ServerBackendMessage::UserSubmit(id))
+                    .await
+                    .unwrap();
 
                 // todo: handle result
                 let _result = tokio::task::spawn_blocking(move || {

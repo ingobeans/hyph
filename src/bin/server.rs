@@ -269,6 +269,16 @@ fn main() {
                             clients.push(user);
                             handle.set_registered_users(VecModel::from_slice(&clients));
                         }
+                        ServerBackendMessage::UserSubmit(user_id) => {
+                            let user_id = user_id.cast_signed();
+                            for user in &mut clients {
+                                if user.id == user_id {
+                                    user.state = UserState::FinishedExam;
+                                    break;
+                                }
+                            }
+                            handle.set_registered_users(VecModel::from_slice(&clients));
+                        }
                         _ => {}
                     },
                     None => {

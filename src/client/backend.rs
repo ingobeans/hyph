@@ -68,7 +68,7 @@ impl Client {
 
     pub async fn send_file_to_server(&self, filepath: &str) -> io::Result<()> {
         let mut stream = TcpStream::connect(&self.addr).await?;
-        self.send_packet_header(&mut stream, ClientMessageType::Transmit)
+        self.send_packet_header(&mut stream, ClientMessageType::SubmitExam)
             .await?;
 
         let mut file = std::fs::File::open(filepath)?;
