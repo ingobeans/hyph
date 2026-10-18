@@ -5,7 +5,7 @@ use std::{
     task::{Context, Waker},
 };
 
-use slint::{Model, ToSharedString};
+use slint::ToSharedString;
 use tokio::{
     fs,
     io::{AsyncReadExt, AsyncWriteExt},
@@ -16,6 +16,7 @@ use tokio::{
 use crate::{RegisteredUser, UserState, backend::ServerBackendMessage::RegisterUser, utils::*};
 
 pub enum ServerBackendMessage {
+    #[expect(dead_code)]
     IoError(std::io::Error),
     Stopped,
     RegisterUser(RegisteredUser),
@@ -34,7 +35,7 @@ impl Server {
         let (terminate_tx, terminate_rx) = channel(10);
         let (logging_tx, logging_rx) = channel(10);
         let listener = TcpListener::bind(&addr).await?;
-        println!("connected to socket");
+        println!("Connected to socket");
 
         let new = Self {
             listener,

@@ -110,6 +110,7 @@ async fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> 
 
 slint::include_modules!();
 fn main() {
+    println!("Hyph Server v{}\n", env!("CARGO_PKG_VERSION"));
     let exams_base = PathBuf::from("exams/");
     let previous_exams = load_previous_exams(&exams_base);
 
@@ -132,8 +133,7 @@ fn main() {
         let Ok((server, logging_rx, terminate_tx)) =
             Server::start(format!("0.0.0.0:{}", PORT)).await
         else {
-            println!("todo: server log fail");
-            return;
+            panic!("Another server instance is already running.");
         };
 
         *server_backend_rc.lock().unwrap() = Some(server);
@@ -241,7 +241,6 @@ fn main() {
                 .await;
             if let Err(e) = result {
                 eprintln!("error stopping exam: {e:?}");
-                return;
             }
         };
 
@@ -282,36 +281,31 @@ fn main() {
                     .map(|_| server_backend)
             });
 
-            loop {
-                match listener_logger.recv().await {
-                    Some(message) => match message {
-                        ServerBackendMessage::Stopped => {
-                            break;
-                        }
-                        ServerBackendMessage::RegisterUser(user) => {
-                            let users = handle.get_registered_users();
-                            users.push_row(user).unwrap();
-                            handle.set_registered_users(users);
-                        }
-                        ServerBackendMessage::UserSubmit(user_id) => {
-                            let user_id = user_id.cast_signed();
-                            let users = handle.get_registered_users();
-                            let mut new = Vec::new();
-                            for mut user in users.iter() {
-                                if user.id == user_id {
-                                    user.state = UserState::FinishedExam;
-                                    new.push(user);
-                                    break;
-                                }
-                                new.push(user);
-                            }
-                            handle.set_registered_users(VecModel::from_slice(&new));
-                        }
-                        _ => {}
-                    },
-                    None => {
+            while let Some(message) = listener_logger.recv().await {
+                match message {
+                    ServerBackendMessage::Stopped => {
                         break;
                     }
+                    ServerBackendMessage::RegisterUser(user) => {
+                        let users = handle.get_registered_users();
+                        users.push_row(user).unwrap();
+                        handle.set_registered_users(users);
+                    }
+                    ServerBackendMessage::UserSubmit(user_id) => {
+                        let user_id = user_id.cast_signed();
+                        let users = handle.get_registered_users();
+                        let mut new = Vec::new();
+                        for mut user in users.iter() {
+                            if user.id == user_id {
+                                user.state = UserState::FinishedExam;
+                                new.push(user);
+                                break;
+                            }
+                            new.push(user);
+                        }
+                        handle.set_registered_users(VecModel::from_slice(&new));
+                    }
+                    _ => {}
                 }
             }
 
