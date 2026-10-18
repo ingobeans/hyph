@@ -310,13 +310,15 @@ fn main() {
             }
 
             let result = listen_future.await;
-            if let Ok(Ok(server_backend)) = result {
-                *server_backend_mutex.lock().unwrap() = Some(server_backend);
-                exam.ended = true;
-                handle.set_active_exam(exam);
-            } else if let Ok(Err(e)) = result {
-                // todo: show error
-                println!("{:?}", e);
+
+            match result {
+                Ok(Ok(server_backend)) => {
+                    *server_backend_mutex.lock().unwrap() = Some(server_backend);
+                    exam.ended = true;
+                    handle.set_active_exam(exam);
+                }
+                Ok(Err(e)) => eprintln!("Error closing exam: {e:?}"),
+                Err(e) => eprintln!("Error closing exam: {e:?}"),
             }
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
