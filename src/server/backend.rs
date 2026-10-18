@@ -1,12 +1,11 @@
 use std::{
-    collections::{HashMap, hash_map::Entry},
     net::SocketAddr,
     path::PathBuf,
-    sync::{Arc, Mutex, mpsc},
+    sync::{Arc, Mutex},
     task::{Context, Waker},
 };
 
-use slint::ToSharedString;
+use slint::{Model, ToSharedString};
 use tokio::{
     fs,
     io::{AsyncReadExt, AsyncWriteExt},
@@ -18,6 +17,7 @@ use crate::{RegisteredUser, UserState, backend::ServerBackendMessage::RegisterUs
 
 pub enum ServerBackendMessage {
     IoError(std::io::Error),
+    Stopped,
     RegisterUser(RegisteredUser),
     UserSubmit(u64),
 }
@@ -62,31 +62,43 @@ impl Server {
         loop {
             let received_path = received_path.clone();
             let submission_path = submission_path.clone();
-            match self.listener.accept().await {
-                Ok((socket, addr)) => {
-                    let logging_tx = self.logging_tx.clone();
-                    let a = registered_clients.clone();
-                    tokio::spawn(async move {
-                        if let Err(e) = Self::handle_connection(
-                            socket,
-                            addr,
-                            a,
-                            received_path,
-                            submission_path,
-                            logging_tx.clone(),
-                        )
-                        .await
-                        {
-                            eprintln!("[Connection Crashed] ({addr}): {e}");
-                            logging_tx
-                                .send(ServerBackendMessage::IoError(e))
+            tokio::select! {
+                connection = self.listener.accept() => {
+                    match connection {
+                        Ok((socket, addr)) => {
+                            let logging_tx = self.logging_tx.clone();
+                            let a = registered_clients.clone();
+                            tokio::spawn(async move {
+                                if let Err(e) = Self::handle_connection(
+                                    socket,
+                                    addr,
+                                    a,
+                                    received_path,
+                                    submission_path,
+                                    logging_tx.clone(),
+                                )
                                 .await
-                                .unwrap();
+                                {
+                                    eprintln!("[Connection Crashed] ({addr}): {e}");
+                                    logging_tx
+                                        .send(ServerBackendMessage::IoError(e))
+                                        .await
+                                        .unwrap();
+                                }
+                            });
                         }
-                    });
+                        Err(e) => println!("client failed connecting: {e:?}"),
+                    }
                 }
-                Err(e) => println!("client failed connecting: {e:?}"),
-            }
+                _ = self.terminate_rx.recv() => {
+                    let logging_tx = self.logging_tx.clone();
+                    logging_tx
+                        .send(ServerBackendMessage::Stopped)
+                        .await
+                        .unwrap();
+                    return Ok(());
+                }
+            };
         }
     }
 
@@ -148,14 +160,12 @@ impl Server {
                     .write_all(&[ServerMessageType::RegisterStatus as u8, result])
                     .await?;
                 if result == 1 {
-                    logging_tx
-                        .send(RegisterUser(RegisteredUser {
-                            id: id as _,
-                            name: name_shared_string,
-                            state: UserState::TakingExam,
-                        }))
-                        .await
-                        .unwrap();
+                    let user = RegisteredUser {
+                        id: id as _,
+                        name: name_shared_string,
+                        state: UserState::TakingExam,
+                    };
+                    logging_tx.send(RegisterUser(user)).await.unwrap();
                 }
             }
             ClientMessageType::SubmitExam => {

@@ -1,14 +1,11 @@
 use std::{
-    collections::HashMap,
     path::{Path, PathBuf},
     rc::Rc,
     sync::Mutex,
-    time::Duration,
 };
 
 use chrono::Local;
-use slint::{SharedString, ToSharedString, VecModel};
-use tokio::sync::mpsc::error::TryRecvError;
+use slint::{Model, SharedString, ToSharedString, VecModel};
 
 use crate::{backend::*, utils::*};
 
@@ -230,54 +227,85 @@ fn main() {
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
     });
 
+    let listener_terminate_rc = listener_terminate.clone();
+    app.on_stop_exam(move || {
+        let listener_terminate = listener_terminate_rc.clone();
+
+        let future = async move {
+            let result = listener_terminate
+                .lock()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .send(())
+                .await;
+            if let Err(e) = result {
+                eprintln!("error stopping exam: {e:?}");
+                return;
+            }
+        };
+
+        slint::spawn_local(async_compat::Compat::new(future)).unwrap();
+    });
+
     let handle = app_handle.clone();
     let exams_base_clone = exams_base.clone();
-
     let server_backend_rc = server_backend.clone();
     let listener_logger_rc = listener_logger.clone();
     app.on_start_exam(move |mut exam| {
         let Some(handle) = handle.clone().upgrade() else {
             return;
         };
-        let server_backend = server_backend_rc.clone();
+        let server_backend_mutex = server_backend_rc.clone();
         let listener_logger = listener_logger_rc.clone();
 
         let exams_base = exams_base_clone.clone();
         let exam_path = exams_base.join(exam.id.cast_unsigned().to_string());
 
         let future = async move {
-            let mut server_backend = server_backend.lock().unwrap();
+            let mut server_backend = {
+                let mut server_backend = server_backend_mutex.lock().unwrap();
+                server_backend.take().unwrap()
+            };
+
             let mut listener_logger = listener_logger.lock().unwrap();
-            let mut server_backend = server_backend.take().unwrap();
             let listener_logger = listener_logger.as_mut().unwrap();
             let registered_clients = Vec::new();
 
             exam.ended = false;
-            handle.set_active_exam(exam);
+            handle.set_active_exam(exam.clone());
 
-            let listen_future =
-                tokio::spawn(
-                    async move { server_backend.listen(registered_clients, exam_path).await },
-                );
-
-            let mut clients = vec![];
+            let listen_future = tokio::spawn(async move {
+                server_backend
+                    .listen(registered_clients, exam_path)
+                    .await
+                    .map(|_| server_backend)
+            });
 
             loop {
                 match listener_logger.recv().await {
                     Some(message) => match message {
+                        ServerBackendMessage::Stopped => {
+                            break;
+                        }
                         ServerBackendMessage::RegisterUser(user) => {
-                            clients.push(user);
-                            handle.set_registered_users(VecModel::from_slice(&clients));
+                            let users = handle.get_registered_users();
+                            users.push_row(user).unwrap();
+                            handle.set_registered_users(users);
                         }
                         ServerBackendMessage::UserSubmit(user_id) => {
                             let user_id = user_id.cast_signed();
-                            for user in &mut clients {
+                            let users = handle.get_registered_users();
+                            let mut new = Vec::new();
+                            for mut user in users.iter() {
                                 if user.id == user_id {
                                     user.state = UserState::FinishedExam;
+                                    new.push(user);
                                     break;
                                 }
+                                new.push(user);
                             }
-                            handle.set_registered_users(VecModel::from_slice(&clients));
+                            handle.set_registered_users(VecModel::from_slice(&new));
                         }
                         _ => {}
                     },
@@ -287,8 +315,14 @@ fn main() {
                 }
             }
 
-            if listen_future.await.is_err() {
+            let result = listen_future.await;
+            if let Ok(Ok(server_backend)) = result {
+                *server_backend_mutex.lock().unwrap() = Some(server_backend);
+                exam.ended = true;
+                handle.set_active_exam(exam);
+            } else if let Ok(Err(e)) = result {
                 // todo: show error
+                println!("{:?}", e);
             }
         };
         slint::spawn_local(async_compat::Compat::new(future)).unwrap();
