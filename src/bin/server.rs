@@ -107,6 +107,7 @@ async fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> 
             id: id.cast_signed(),
             name: name.to_shared_string(),
             state: UserState::FinishedExam,
+            cheating_detected: false,
         };
         users.push(user);
     }
@@ -170,6 +171,17 @@ fn main() {
                 logical_pos.x + delta_x,
                 logical_pos.y + delta_y,
             ));
+    });
+
+    let handle = app_handle.clone();
+    app.on_inspect_submission(move |submitted_user| {
+        let Some(handle) = handle.clone().upgrade() else {
+            return;
+        };
+        handle.set_inspected_submission(InspectedSubmission {
+            exam_length: 0.0,
+            user: submitted_user,
+        });
     });
 
     let handle = app_handle.clone();

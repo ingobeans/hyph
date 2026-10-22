@@ -165,6 +165,7 @@ impl Server {
                         id: id as _,
                         name: name_shared_string,
                         state: UserState::TakingExam,
+                        cheating_detected: false,
                     };
                     logging_tx.send(RegisterUser(user)).await.unwrap();
                 }

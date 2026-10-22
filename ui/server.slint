@@ -16,6 +16,7 @@ export enum UserState {
 export struct RegisteredUser {
     name: string,
     state: UserState,
+    cheating-detected: bool,
     id: duration, // use durations for ID since its represented by a 64 bit integer rather than 32 bit
 }
 export struct Exam {
@@ -24,6 +25,18 @@ export struct Exam {
     submissions: int,
     id: duration, // use durations for ID since its represented by a 64 bit integer rather than 32 bit
     ended: bool,
+}
+export struct InspectedSubmission {
+    user: RegisteredUser,
+    exam_length: float,
+}
+
+component CheatingIndicator inherits Text {
+    in property <bool> cheating;
+    text: cheating ? "Cheating was detected" : "No cheating detected.";
+    color: cheating ? #ec3e5b : grey;
+    y: 36px;
+    x: 5px;
 }
 
 export component ServerApp inherits AppWindow {
@@ -42,6 +55,7 @@ export component ServerApp inherits AppWindow {
     callback back_exam();
     callback new_exam(string);
     callback start_exam(Exam);
+    callback inspect_submission(RegisteredUser);
     callback stop_exam();
 
     in property <[Exam]> previous_exams: [
@@ -83,6 +97,7 @@ export component ServerApp inherits AppWindow {
             name:"Person Personson",
             state: UserState.FinishedExam,
             id:45ms,
+            cheating-detected: true,
         }
     ];
 
@@ -91,6 +106,14 @@ export component ServerApp inherits AppWindow {
         name:"Placeholder Exam Name",
         ended: true,
         date: "14/10 2026",
+    };
+
+    in-out property <InspectedSubmission> inspected-submission: {
+        user: {
+            name: "Person McPerson",
+            id: 1ms,
+        },
+        exam-length:60.0 * 70.0,
     };
 
     Titlebar {
@@ -103,7 +126,7 @@ export component ServerApp inherits AppWindow {
 
     // page before exam started
     Container {
-        visible: active-exam.id == 0;
+        visible: active-exam.id == 0 && inspected-submission.user.id == 0ms;
         width: parent.width;
         height: parent.height;
         Text {
@@ -341,11 +364,8 @@ export component ServerApp inherits AppWindow {
                     x: 5px;
                 }
 
-                cheating-indicator := Text {
-                    text: "No cheating detected.";
-                    color: grey;
-                    y: 36px;
-                    x: 5px;
+                cheating-indicator := CheatingIndicator {
+                    cheating: user.cheating-detected;
                 }
 
                 Button {
@@ -355,7 +375,7 @@ export component ServerApp inherits AppWindow {
                     width: parent.width - 10px;
                     height: 25px;
                     y: parent.height - self.height - 5px;
-                    // clicked => root.show_previous_exam(exam.id);
+                    clicked => root.inspect_submission(user);
                 }
 
                 OuterBorder {
@@ -365,6 +385,56 @@ export component ServerApp inherits AppWindow {
                     border-color: rgb(61, 68, 77);
                 }
             }
+        }
+    }
+
+    // page when inspecting specific submission
+    Container {
+        visible: inspected-submission.user.id != 0ms;
+        width: parent.width;
+        height: parent.height;
+
+        Rectangle {
+            height: parent.height - 40px - 1px;
+            width: parent.width - 2px;
+            y: 40px;
+            background: #00000099;
+            x: 1px;
+
+            active-window := Rectangle {
+                background: rgb(13, 17, 23);
+                width: 90%;
+                x: 0;
+            }
+        }
+
+        ImageButton {
+            y: 45px;
+            x: active-window.width - 35px;
+            width: 30px;
+            height: 20px;
+            image: @image-url("assets/minus.png");
+            clicked => { inspected-submission.user.id = 0ms };
+        }
+
+        Text {
+            text: inspected-submission.user.name;
+            font-size: 20px;
+            y: 50px;
+            x: 20px;
+        }
+
+        CheatingIndicator {
+            cheating: inspected-submission.user.cheating-detected;
+            y: 80px;
+            x: 20px;
+        }
+
+        Button {
+            y: 100px;
+            x: 20px;
+            text: "Show Submitted Folder";
+            height: 30px;
         }
     }
 }
