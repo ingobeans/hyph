@@ -25,7 +25,7 @@ mod monitoring;
 slint::include_modules!();
 fn main() -> std::io::Result<()> {
     println!("Hyph Client v{}\n", env!("CARGO_PKG_VERSION"));
-    let name = whoami::realname()?;
+    let name = whoami::realname().unwrap_or(whoami::username()?);
     println!("Logged in as {name}");
     let client = Client::new(String::new());
     let client_rc = Rc::new(Mutex::new(client));
