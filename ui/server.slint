@@ -56,14 +56,38 @@ export component ServerApp inherits AppWindow {
             submissions: 16,
         }
     ];
-    in property <[RegisteredUser]> registered_users: [{
-        name:"Person Personson",
-        state: UserState.TakingExam,
-        id:45ms,
-    }];
+
+    // testing placeholders:
+    in property <[RegisteredUser]> registered_users: [
+        {
+            name:"Person Personson",
+            state: UserState.TakingExam,
+            id:45ms,
+        },
+        {
+            name:"Person Personson",
+            state: UserState.FinishedExam,
+            id:45ms,
+        },
+        {
+            name:"Person Personson",
+            state: UserState.TakingExam,
+            id:45ms,
+        },
+        {
+            name:"Person Personson",
+            state: UserState.FinishedExam,
+            id:45ms,
+        },
+        {
+            name:"Person Personson",
+            state: UserState.FinishedExam,
+            id:45ms,
+        }
+    ];
 
     in property <Exam> active-exam: {
-        // id:1ms,
+        id:1ms,
         name:"Placeholder Exam Name",
         ended: true,
         date: "14/10 2026",
@@ -288,7 +312,7 @@ export component ServerApp inherits AppWindow {
             max-width: parent.width;
             spacing: 20px;
             spacing-vertical: 20px;
-            y: 90px;
+            y: 110px;
 
             for user in root.registered_users: Rectangle {
                 width: max(user-name.width,user-state.width,cheating-indicator.width) + 10px;
