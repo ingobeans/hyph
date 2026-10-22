@@ -326,6 +326,7 @@ export component ServerApp inherits AppWindow {
 
                 Button {
                     text: "View Exam";
+                    enabled: user.state == UserState.FinishedExam;
                     x: 5px;
                     width: parent.width - 10px;
                     height: 25px;
