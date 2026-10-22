@@ -83,20 +83,25 @@ async fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> 
         if submission.file_type().await.unwrap().is_file() {
             continue;
         }
-        
+
         let Ok(id) = submission.file_name().to_string_lossy().parse::<u64>() else {
             continue;
         };
 
         let path = submission.path();
-        let info_path = path.join("info.txt");
-        let Ok(info) = tokio::fs::read_to_string(info_path).await else {
-            continue;
-        };
-        let mut info_rows = info.split("\n");
-        let Some(name) = info_rows.next() else {
-            continue;
-        };
+
+        let mut name = "Unknown".to_string();
+        'get_info: {
+            let info_path = path.join("info.txt");
+            let Ok(info) = tokio::fs::read_to_string(info_path).await else {
+                break 'get_info;
+            };
+            let mut info_rows = info.split("\n");
+
+            if let Some(n) = info_rows.next() {
+                name = n.to_string();
+            };
+        }
 
         let user = RegisteredUser {
             id: id.cast_signed(),
