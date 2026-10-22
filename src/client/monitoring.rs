@@ -171,7 +171,13 @@ fn run_monitoring(
         thread::sleep(Duration::from_secs(1));
     };
 
-    println!("stopped monitoring. attempting to zip exam data (screen capture + submission).");
+    println!("stopped monitoring. writing exam user data.");
+
+    let name = whoami::realname().unwrap_or(whoami::username().unwrap_or("Unknown Name".to_string()));
+    std::fs::write(
+        exam_data_dir.join("info.txt"), format!("{name}\n"))?;
+
+    println!("attempting to zip exam data (screen capture + submission).");
 
     status_tx
         .send(MonitoringStateMessage::Stopped)
