@@ -1,6 +1,6 @@
 [package]
 name = "hyph"
-version = "0.7.19"
+version = "0.7.20"
 edition = "2024"
 build = "build.rs"
 

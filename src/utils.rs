@@ -37,18 +37,23 @@ pub fn parse_message_type<T: FromPrimitive>(value: u8) -> std::io::Result<T> {
     Ok(message_type)
 }
 
-pub type OpenedWindows = HashMap<String, Vec<i64>>;
+pub struct WindowOpenTime {
+    pub opened: i64,
+    pub closed: i64,
+}
+
+pub type OpenedWindows = HashMap<String, Vec<WindowOpenTime>>;
 pub fn serialize_opened_windows(v: OpenedWindows) -> String {
     // serialized data follows the format of:
-    //      KEY1:TIME1,TIME2,TIME3,TIME4
-    //      KEY2:TIME1
+    //      KEY1:OPENTIME1-CLOSETIME1,OPENTIME2-CLOSETIME2
+    //      KEY2:OPENTIME1-CLOSETIME1
     // etc
 
     let mut buf = String::new();
     for (k, v) in v.into_iter() {
         buf += &(k + ":");
         for time in v {
-            buf += &format!("{time},");
+            buf += &format!("{}-{},", time.opened, time.closed);
         }
         buf.pop(); // remove last comma
         buf += "\n";

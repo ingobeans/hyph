@@ -113,6 +113,8 @@ fn run_monitoring(
     };
 
     let mut opened_windows: OpenedWindows = HashMap::new();
+    let mut opened_last: Vec<String> = Vec::new();
+
     let mut screenshot_counter: u8 = 0;
 
     let submission_dir = loop {
@@ -132,18 +134,39 @@ fn run_monitoring(
         // track open programs
         match get_open_windows() {
             Some(windows) => {
-                for window in windows.into_iter() {
-                    let date = Local::now();
-                    let unix_time = date.timestamp();
-                    match opened_windows.entry(window) {
-                        Entry::Occupied(mut entry) => {
-                            entry.get_mut().push(unix_time);
-                        }
-                        Entry::Vacant(entry) => {
-                            entry.insert(vec![unix_time]);
+                let date = Local::now();
+                let unix_time = date.timestamp();
+                for window in windows.iter() {
+                    if !opened_last.contains(&window) {
+                        // window was just opened, add an entry for it
+                        match opened_windows.entry(window.clone()) {
+                            Entry::Occupied(mut entry) => {
+                                entry.get_mut().push(WindowOpenTime {
+                                    opened: unix_time,
+                                    closed: 0,
+                                });
+                            }
+                            Entry::Vacant(entry) => {
+                                entry.insert(vec![WindowOpenTime {
+                                    opened: unix_time,
+                                    closed: 0,
+                                }]);
+                            }
                         }
                     }
                 }
+                for window in opened_last.into_iter() {
+                    if !windows.contains(&window) {
+                        // window was closed. update last entry of the window with the close time
+
+                        if let Some(entry) = opened_windows.get_mut(&window)
+                            && let Some(entry) = entry.last_mut()
+                        {
+                            entry.closed = unix_time;
+                        }
+                    }
+                }
+                opened_last = windows;
             }
             None => {
                 logging_tx
@@ -173,15 +196,27 @@ fn run_monitoring(
 
     println!("stopped monitoring. writing exam user data.");
 
-    let name = whoami::realname().unwrap_or(whoami::username().unwrap_or("Unknown Name".to_string()));
-    std::fs::write(
-        exam_data_dir.join("info.txt"), format!("{name}\n"))?;
+    let name =
+        whoami::realname().unwrap_or(whoami::username().unwrap_or("Unknown Name".to_string()));
+    std::fs::write(exam_data_dir.join("info.txt"), format!("{name}\n"))?;
 
     println!("attempting to zip exam data (screen capture + submission).");
 
     status_tx
         .send(MonitoringStateMessage::Stopped)
         .map_err(std::io::Error::other)?;
+
+    let date = Local::now();
+    let unix_time = date.timestamp();
+
+    // replace all windows that are unclosed's close time as current time
+    for (_k, v) in opened_windows.iter_mut() {
+        for t in v {
+            if t.closed == 0 {
+                t.closed = unix_time;
+            }
+        }
+    }
 
     // write opened windows data to file
     let serialized_window_data = serialize_opened_windows(opened_windows);
