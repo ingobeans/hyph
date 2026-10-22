@@ -83,8 +83,8 @@ async fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> 
         if submission.file_type().await.unwrap().is_file() {
             continue;
         }
-
-        let Ok(id) = submission.file_name().to_string_lossy().parse() else {
+        
+        let Ok(id) = submission.file_name().to_string_lossy().parse::<u64>() else {
             continue;
         };
 
@@ -99,7 +99,7 @@ async fn load_exam_submissions(exam: &Exam, base: &Path) -> Vec<RegisteredUser> 
         };
 
         let user = RegisteredUser {
-            id,
+            id: id.cast_signed(),
             name: name.to_shared_string(),
             state: UserState::FinishedExam,
         };
