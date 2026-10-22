@@ -205,7 +205,7 @@ export component ServerApp inherits AppWindow {
                 Button {
                     text: "Create";
                     color: #45e082;
-                    clicked => root.new_exam(exam-name-input.out-text);
+                    clicked => { exam-name-popup.hide(); root.new_exam(exam-name-input.out-text); }
                 }
 
                 Button {
