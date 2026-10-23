@@ -8,6 +8,7 @@ import  {
     Button,
     PopupDialog,
 } from "components.slint";
+import { ScrollView } from "std-widgets.slint";
 
 export enum UserState {
     TakingExam,
@@ -26,9 +27,18 @@ export struct Exam {
     id: duration, // use durations for ID since its represented by a 64 bit integer rather than 32 bit
     ended: bool,
 }
+export struct TimelineBar {
+    start: float,
+    end: float,
+}
+export struct TimelineEntry {
+    name: string,
+    bars: [TimelineBar],
+}
 export struct InspectedSubmission {
     user: RegisteredUser,
     exam_length: float,
+    timeline_entries: [TimelineEntry],
 }
 
 component CheatingIndicator inherits Text {
@@ -55,7 +65,7 @@ export component ServerApp inherits AppWindow {
     callback back_exam();
     callback new_exam(string);
     callback start_exam(Exam);
-    callback inspect_submission(RegisteredUser);
+    callback inspect_submission(RegisteredUser, Exam);
     callback stop_exam();
 
     in property <[Exam]> previous_exams: [
@@ -114,6 +124,34 @@ export component ServerApp inherits AppWindow {
             id: 1ms,
         },
         exam-length:60.0 * 70.0,
+        timeline_entries: [
+            {
+                name:"Windows Explorer",
+                bars: [
+                    {
+                        start: 0.0,
+                        end: 0.15,
+                    },
+                    {
+                        start: 0.25,
+                        end: 0.35,
+                    },
+                ],
+            },
+            {
+                name:"Window with Things",
+                bars: [
+                    {
+                        start: 0.0,
+                        end: 0.26,
+                    },
+                    {
+                        start: 0.28,
+                        end: 1.0,
+                    },
+                ],
+            }
+        ],
     };
 
     Titlebar {
@@ -375,7 +413,7 @@ export component ServerApp inherits AppWindow {
                     width: parent.width - 10px;
                     height: 25px;
                     y: parent.height - self.height - 5px;
-                    clicked => root.inspect_submission(user);
+                    clicked => root.inspect_submission(user, active-exam);
                 }
 
                 OuterBorder {
@@ -435,6 +473,53 @@ export component ServerApp inherits AppWindow {
             x: 20px;
             text: "Show Submitted Folder";
             height: 30px;
+        }
+
+        Rectangle {
+            width: active-window.width;
+            height: 30%;
+            x: 0;
+            y: parent.height - self.height;
+            background: black;
+
+            ScrollView {
+                y: 0;
+                height: parent.height;
+                width: parent.width;
+                content-height: 300px;
+                for entry[index] in inspected-submission.timeline-entries: Container {
+                    y: index * self.height;
+                    width: parent.width;
+                    height: 20px;
+
+                    entry-label := Text {
+                        x: 0px;
+                        height: 20px;
+                        text: entry.name;
+                        y: 4px;
+                    }
+
+                    for bar[j] in entry.bars: Rectangle {
+                        y: 8px;
+                        background: #63b9ff;
+                        height: 5px;
+                        x: entry-label.width + 10px + bar.start * (parent.width - entry-label.width - 20px);
+                        width: (bar.end - bar.start) * (parent.width - entry-label.width - 20px);
+                        border-radius: 5px;
+                    }
+                    Rectangle {
+                        background: rgb(61, 68, 77);
+                        height: 2px;
+                        y: parent.height;
+                    }
+                }
+            }
+
+            Rectangle {
+                background: rgb(61, 68, 77);
+                height: 2px;
+                y: 0;
+            }
         }
     }
 }

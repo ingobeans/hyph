@@ -5,7 +5,7 @@ use std::{
 };
 
 use chrono::Local;
-use slint::{Model, SharedString, ToSharedString, VecModel};
+use slint::{Model, SharedString, ToSharedString, VecModel, Weak};
 
 use crate::{backend::*, utils::*};
 
@@ -174,14 +174,91 @@ fn main() {
     });
 
     let handle = app_handle.clone();
-    app.on_inspect_submission(move |submitted_user| {
-        let Some(handle) = handle.clone().upgrade() else {
-            return;
-        };
-        handle.set_inspected_submission(InspectedSubmission {
-            exam_length: 0.0,
-            user: submitted_user,
-        });
+    let exams_base_clone = exams_base.clone();
+    app.on_inspect_submission(move |user, exam| {
+        let exams_base = exams_base_clone.clone();
+        async fn inspect_exam(
+            user: RegisteredUser,
+            exam: Exam,
+            handle: Rc<Weak<ServerApp>>,
+            base: PathBuf,
+        ) {
+            let Some(handle) = handle.clone().upgrade() else {
+                return;
+            };
+            let user_id = user.id.cast_unsigned();
+
+            let exam_dir = base.join(exam.id.cast_unsigned().to_string());
+            let submissions_dir = exam_dir.join("submissions");
+            let submission_dir = submissions_dir.join(user_id.to_string());
+
+            if !submission_dir.exists() {
+                eprintln!("Exam submission directory '{submission_dir:?}' doesn't exist");
+                return;
+            }
+
+            let opened_windows_text =
+                tokio::fs::read_to_string(submission_dir.join("opened_windows.txt"))
+                    .await
+                    .unwrap_or_else(|_| {
+                        eprintln!("opened_windows.txt doesn't exist for user {user_id}");
+                        String::new()
+                    });
+            let lines = opened_windows_text.lines();
+            let mut entries = Vec::new();
+            for line in lines {
+                let Some((name, times)) = line.rsplit_once(":") else {
+                    continue;
+                };
+                let mut bars: Vec<TimelineBar> = Vec::new();
+                let mut bars_time: Vec<(u64, u64)> = Vec::new();
+
+                let mut lowest = u64::MAX;
+                let mut highest = 0;
+                for bar in times.split(",") {
+                    let Some((start, end)) = bar.split_once("-") else {
+                        continue;
+                    };
+                    let Ok(start) = start.parse() else {
+                        continue;
+                    };
+                    let Ok(end) = end.parse() else {
+                        continue;
+                    };
+                    if end > highest {
+                        highest = end;
+                    }
+                    if start < lowest {
+                        lowest = start;
+                    }
+                    bars_time.push((start, end));
+                }
+                for bar in &mut bars_time {
+                    let start = (bar.0 - lowest) as f32 / (highest - lowest) as f32;
+                    let end = (bar.1 - lowest) as f32 / (highest - lowest) as f32;
+                    bars.push(TimelineBar { start, end });
+                }
+
+                entries.push(TimelineEntry {
+                    bars: VecModel::from_slice(&bars),
+                    name: name.to_shared_string(),
+                });
+            }
+
+            handle.set_inspected_submission(InspectedSubmission {
+                exam_length: 0.0,
+                user,
+                timeline_entries: VecModel::from_slice(&entries),
+            });
+        }
+
+        slint::spawn_local(async_compat::Compat::new(inspect_exam(
+            user,
+            exam,
+            handle.clone(),
+            exams_base,
+        )))
+        .unwrap();
     });
 
     let handle = app_handle.clone();
