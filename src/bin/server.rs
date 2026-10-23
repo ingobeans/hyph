@@ -155,6 +155,20 @@ fn main() {
             handle.window().hide().unwrap();
         }
     });
+    let handle = app_handle.clone();
+    app.on_minimize_program(move || {
+        if let Some(handle) = handle.upgrade() {
+            handle.window().set_minimized(true);
+        }
+    });
+    let handle = app_handle.clone();
+    app.on_maximize_program(move || {
+        if let Some(handle) = handle.upgrade() {
+            handle
+                .window()
+                .set_maximized(!handle.window().is_maximized());
+        }
+    });
 
     let handle = app_handle.clone();
     app.on_mouse_move(move |delta_x, delta_y| {

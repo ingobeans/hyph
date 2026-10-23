@@ -60,6 +60,8 @@ export component ServerApp inherits AppWindow {
     resize-border-width: 10px;
 
     callback close_program();
+    callback maximize_program();
+    callback minimize_program();
     callback mouse_move(length, length);
     callback show_previous_exam(duration);
     callback back_exam();
@@ -158,8 +160,11 @@ export component ServerApp inherits AppWindow {
         width: parent.width;
         height: parent.height;
         titlebar-text: "Hyph Server";
+        extra-controls: true;
         mouse_move(a, b) => mouse_move(a,b);
         close_program => close_program();
+        minimize_program => minimize_program();
+        maximize_program => maximize_program();
     }
 
     // page before exam started

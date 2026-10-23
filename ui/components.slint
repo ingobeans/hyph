@@ -124,6 +124,7 @@ export component ImageButton inherits TouchArea {
     in property <brush> normal-color: white;
     in property <brush> hover-color: #b4b4b4;
     in property <brush> clicked-color: #a0a0a0;
+    in property <length> border-width: 0.5px;
 
     img := Image {
         source: root.image;
@@ -134,7 +135,7 @@ export component ImageButton inherits TouchArea {
 
     Rectangle {
         border-color: img.colorize;
-        border-width: 0.5px;
+        border-width: root.border-width;
         width: parent.width;
         height: parent.height;
         border-radius: 2px;
@@ -186,9 +187,12 @@ export component ImageButton inherits TouchArea {
 export component Titlebar {
     callback mouse_move(length, length);
     callback close_program();
+    callback maximize_program();
+    callback minimize_program();
     in property <string> titlebar-text;
     in property <bool> close-enabled: true;
     in property <bool> small: false;
+    in property <bool> extra-controls;
 
     TouchArea {
         y: 0;
@@ -224,7 +228,7 @@ export component Titlebar {
         x: !small ? ((parent.width - self.width) / 2) : 7px;
     }
 
-    ImageButton {
+    close-btn := ImageButton {
         enabled: root.close-enabled;
         width: !small ? 30px : 20px;
         height: !small ? 30px : 20px;
@@ -232,6 +236,32 @@ export component Titlebar {
         y: 5px;
 
         clicked => close_program();
+    }
+
+    maximize-btn := ImageButton {
+        visible: root.extra-controls;
+        enabled: root.close-enabled;
+        image: @image-url("assets/square.png");
+        width: !small ? 30px : 20px;
+        height: !small ? 30px : 20px;
+        border-width: self.has-hover ? 0.5px : 0;
+        x: (parent.width) - (self.width) - 5px - (self.width + 5px);
+        y: 5px;
+
+        clicked => maximize_program();
+    }
+
+    minimize-btn := ImageButton {
+        visible: root.extra-controls;
+        image: @image-url("assets/minus.png");
+        enabled: root.close-enabled;
+        width: !small ? 30px : 20px;
+        height: !small ? 30px : 20px;
+        border-width: self.has-hover ? 0.5px : 0;
+        x: (parent.width) - (self.width) - 5px - (self.width + 5px) * 2;
+        y: 5px;
+
+        clicked => minimize_program();
     }
 }
 
