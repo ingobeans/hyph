@@ -493,7 +493,7 @@ export component ServerApp inherits AppWindow {
                     height: 20px;
 
                     entry-label := Text {
-                        x: 0px;
+                        x: 10px;
                         height: 20px;
                         text: entry.name;
                         y: 4px;
@@ -503,8 +503,8 @@ export component ServerApp inherits AppWindow {
                         y: 8px;
                         background: #63b9ff;
                         height: 5px;
-                        x: entry-label.width + 10px + bar.start * (parent.width - entry-label.width - 20px);
-                        width: (bar.end - bar.start) * (parent.width - entry-label.width - 20px);
+                        x: entry-label.width + 20px + bar.start * (parent.width - entry-label.width - 30px);
+                        width: (bar.end - bar.start) * (parent.width - entry-label.width - 30px);
                         border-radius: 5px;
                     }
                     Rectangle {
