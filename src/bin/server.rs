@@ -5,6 +5,7 @@ use std::{
 };
 
 use chrono::Local;
+use image::load_from_memory_with_format;
 use slint::{Model, SharedString, ToSharedString, VecModel, Weak};
 
 use crate::{backend::*, utils::*};
@@ -170,23 +171,6 @@ fn main() {
         }
     });
 
-    let exams_base_clone = exams_base.clone();
-    app.on_load_exam_screenshot(move |exam, user, frame| {
-        let captures_path = exams_base_clone
-            .join(exam.id.cast_unsigned().to_string())
-            .join("submissions")
-            .join(user.id.cast_unsigned().to_string())
-            .join("captures");
-        let Ok(items) = std::fs::read_dir(&captures_path) else {
-            return Default::default();
-        };
-        let Some(frame) = items.flatten().nth(frame as _) else {
-            return Default::default();
-        };
-        let frame = captures_path.join(frame.file_name());
-        slint::Image::load_from_path(&frame).unwrap_or_default()
-    });
-
     let handle = app_handle.clone();
     app.on_mouse_move(move |delta_x, delta_y| {
         let Some(pin_win_clone) = handle.upgrade() else {
@@ -281,6 +265,42 @@ fn main() {
                 user,
                 timeline_entries: VecModel::from_slice(&entries),
             });
+
+            let captures_path = submission_dir.join("captures");
+            let read_dir = tokio::fs::read_dir(&captures_path).await;
+            if let Ok(mut read_dir) = read_dir {
+                let mut frame = Default::default();
+                for _ in 0..handle.get_exam_screenshot_frame() + 1 {
+                    let Ok(Some(r)) = read_dir.next_entry().await else {
+                        break;
+                    };
+                    frame = r.file_name().to_string_lossy().to_shared_string();
+                }
+                println!("{frame}");
+                if let Ok(data) = tokio::fs::read(&captures_path.join(frame)).await {
+                    let result = tokio::task::spawn_blocking(move || {
+                        if let Ok(dynamic_image) =
+                            load_from_memory_with_format(&data, image::ImageFormat::Jpeg)
+                        {
+                            let rgb = dynamic_image.to_rgb8();
+                            let buffer = slint::SharedPixelBuffer::clone_from_slice(
+                                rgb.as_raw(),
+                                rgb.width(),
+                                rgb.height(),
+                            );
+                            Some(buffer)
+                        } else {
+                            None
+                        }
+                    })
+                    .await;
+
+                    if let Ok(Some(buffer)) = result {
+                        let image = slint::Image::from_rgb8(buffer);
+                        handle.set_exam_screenshot_image(image);
+                    }
+                }
+            }
         }
 
         slint::spawn_local(async_compat::Compat::new(inspect_exam(
