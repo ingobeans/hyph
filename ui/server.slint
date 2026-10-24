@@ -491,7 +491,7 @@ export component ServerApp inherits AppWindow {
                 y: 0;
                 height: parent.height;
                 width: parent.width;
-                content-height: 300px;
+                content-height: 20px * inspected-submission.timeline-entries.length + 2px;
                 for entry[index] in inspected-submission.timeline-entries: Container {
                     y: index * self.height;
                     width: parent.width;
