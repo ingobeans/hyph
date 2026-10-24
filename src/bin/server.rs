@@ -276,7 +276,6 @@ fn main() {
                     };
                     frame = r.file_name().to_string_lossy().to_shared_string();
                 }
-                println!("{frame}");
                 if let Ok(data) = tokio::fs::read(&captures_path.join(frame)).await {
                     let result = tokio::task::spawn_blocking(move || {
                         if let Ok(dynamic_image) =

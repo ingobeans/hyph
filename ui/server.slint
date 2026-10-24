@@ -489,10 +489,19 @@ export component ServerApp inherits AppWindow {
             x: exam-screenshot.x - 1px;
             y: exam-screenshot.y - 1px;
             background: #ffffff;
+
+            Rectangle {
+                background: black;
+                width: parent.width - 2px;
+                height: parent.height - 2px;
+            }
+
+            Text {
+                text: "Loading...";
+            }
         }
 
         exam-screenshot := Image {
-            // temporary placeholder
             source: exam-screenshot-image;
             height: 370px;
             width: 16 / 9 * self.height;
