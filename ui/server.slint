@@ -52,8 +52,8 @@ component CheatingIndicator inherits Text {
 export component ServerApp inherits AppWindow {
     title: "Hyph Server";
 
-    preferred-width: 1030px;
-    preferred-height: 520px;
+    preferred-width: 1150px;
+    preferred-height: 670px;
     min-height: 275px;
     min-width: 275px;
 
@@ -69,6 +69,7 @@ export component ServerApp inherits AppWindow {
     callback start_exam(Exam);
     callback inspect_submission(RegisteredUser, Exam);
     callback stop_exam();
+    callback load_exam_screenshot(duration, int) -> image;
 
     in property <[Exam]> previous_exams: [
         {
@@ -123,7 +124,7 @@ export component ServerApp inherits AppWindow {
     in-out property <InspectedSubmission> inspected-submission: {
         user: {
             name: "Person McPerson",
-            // id: 1ms,
+            id: 1ms,
         },
         exam-length:60.0 * 70.0,
         timeline_entries: [
@@ -464,27 +465,44 @@ export component ServerApp inherits AppWindow {
             text: inspected-submission.user.name;
             font-size: 20px;
             y: 50px;
-            x: 20px;
+            x: exam-screenshot.width + 40px;
         }
 
         CheatingIndicator {
             cheating: inspected-submission.user.cheating-detected;
             y: 80px;
-            x: 20px;
+            x: exam-screenshot.width + 40px;
         }
 
         Button {
             y: 100px;
-            x: 20px;
+            x: exam-screenshot.width + 40px;
             text: "Show Submitted Folder";
             height: 30px;
         }
 
         Rectangle {
+            width: exam-screenshot.width + 1px * 3;
+            height: exam-screenshot.height + 1px * 2;
+            x: exam-screenshot.x - 1px;
+            y: exam-screenshot.y - 1px;
+            background: #ffffff;
+        }
+
+        exam-screenshot := Image {
+            // temporary placeholder
+            source: @image-url("../exams/10195271245359036260/submissions/4579862753547775025/captures/1792693755.jpg");
+            height: 370px;
+            width: 16 / 9 * self.height;
+            x: 20px;
+            y: 50px;
+        }
+
+        Rectangle {
             width: active-window.width;
-            height: 30%;
-            x: 0;
-            y: parent.height - self.height;
+            height: 25%;
+            x: 1px;
+            y: parent.height - self.height - 1px;
             background: black;
 
             ScrollView {
