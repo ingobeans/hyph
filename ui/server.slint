@@ -69,7 +69,7 @@ export component ServerApp inherits AppWindow {
     callback start_exam(Exam);
     callback inspect_submission(RegisteredUser, Exam);
     callback stop_exam();
-    callback load_exam_screenshot(duration, int) -> image;
+    pure callback load_exam_screenshot(Exam, RegisteredUser, int) -> image;
 
     in property <[Exam]> previous_exams: [
         {
@@ -489,9 +489,11 @@ export component ServerApp inherits AppWindow {
             background: #ffffff;
         }
 
+        in-out property <int> exam-frame: 0;
+
         exam-screenshot := Image {
             // temporary placeholder
-            source: @image-url("../exams/10195271245359036260/submissions/4579862753547775025/captures/1792693755.jpg");
+            source: load_exam_screenshot(active-exam,inspected-submission.user,exam-frame);
             height: 370px;
             width: 16 / 9 * self.height;
             x: 20px;

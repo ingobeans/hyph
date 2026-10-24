@@ -170,6 +170,23 @@ fn main() {
         }
     });
 
+    let exams_base_clone = exams_base.clone();
+    app.on_load_exam_screenshot(move |exam, user, frame| {
+        let captures_path = exams_base_clone
+            .join(exam.id.cast_unsigned().to_string())
+            .join("submissions")
+            .join(user.id.cast_unsigned().to_string())
+            .join("captures");
+        let Ok(items) = std::fs::read_dir(&captures_path) else {
+            return Default::default();
+        };
+        let Some(frame) = items.flatten().nth(frame as _) else {
+            return Default::default();
+        };
+        let frame = captures_path.join(frame.file_name());
+        slint::Image::load_from_path(&frame).unwrap_or_default()
+    });
+
     let handle = app_handle.clone();
     app.on_mouse_move(move |delta_x, delta_y| {
         let Some(pin_win_clone) = handle.upgrade() else {
