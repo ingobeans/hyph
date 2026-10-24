@@ -60,3 +60,24 @@ pub fn serialize_opened_windows(v: OpenedWindows) -> String {
     }
     buf
 }
+
+/// Used to debug/profile how long things take
+pub struct Timer {
+    start: std::time::Instant,
+    text: &'static str,
+}
+impl Timer {
+    pub fn new(text: &'static str) -> Self {
+        Self {
+            start: std::time::Instant::now(),
+            text,
+        }
+    }
+}
+impl Drop for Timer {
+    fn drop(&mut self) {
+        let now = std::time::Instant::now();
+        let passed = (now - self.start).as_micros() as f64 / 1000.0 / 1000.0;
+        println!("{:?} - {passed}s", self.text);
+    }
+}
